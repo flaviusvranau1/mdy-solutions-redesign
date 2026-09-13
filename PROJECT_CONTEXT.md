@@ -16,6 +16,18 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-13 — separate public comparison links
+
+- User explicitly requested both variants on distinct GitHub-hosted links.
+- The improved version remains at the existing root URL. `/original/` contains
+  the four original static assets exported from `before-3d-upgrade-2026-09-13`.
+- Verified each original file's raw Git blob hash against the saved baseline;
+  the original is an exact source copy, with its own relative CSS/JS assets.
+- Both original JavaScript files pass `node --check`. No site code was changed.
+- Keep `/original/` frozen for comparison. Future improvements belong at the root.
+- Improved: https://flaviusvranau1.github.io/mdy-solutions-redesign/
+- Original: https://flaviusvranau1.github.io/mdy-solutions-redesign/original/
+
 ### 2026-09-13 — realistic materials and smoother motion
 
 - Preserved the original at commit `2898d43794038063d94787ae751f94df05b04112`

@@ -16,6 +16,24 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-13 — restore atmosphere and expressive motion
+
+- User feedback: removing the full-page glowing dots lost an important part of
+  the design, and the nearly stationary front-facing sculpture felt too rigid.
+  Preserve the star field and visibly continuous motion in future iterations.
+- Restored the original layered particle shader across the entire page, including
+  subtle twinkle, depth, pointer parallax and scroll drift. 1,600 particles on
+  desktop / 850 on mobile, in one GPU draw call. The canvas shares one WebGL
+  renderer with the physical sculpture, using a viewport/scissor for its stage.
+- Restored continuous 0.11 rad/s core rotation. Added gentle floating/rolling,
+  independent counter-rotating orbits, moving rail accents and faster satellites.
+  Pointer input is page-wide again, with time-based damping and stronger response.
+  Thinner solid rails keep the new materials while making the composition lighter.
+- The background intentionally continues below the hero. The heavier sculpture
+  is skipped outside its stage; everything stops while the page is hidden. Reduced
+  motion renders the static stars and sculpture without an animation loop or
+  scroll parallax. The original comparison directory remains frozen.
+
 ### 2026-09-13 — separate public comparison links
 
 - User explicitly requested both variants on distinct GitHub-hosted links.
@@ -53,6 +71,15 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
   their intended large type instead of inheriting the small muted label style.
 
 ## Validation
+
+- Current atmosphere/motion correction: syntax and whitespace checks; desktop and
+  390 x 844 mobile browser QA; no horizontal overflow or console errors.
+- Local-only renderer instrumentation: background = 1 draw call; hero = 22 draw
+  calls. Recorded continuous core yaw changing from 0.023 to 1.367 radians.
+  Reduced-motion QA: zero animation callbacks, static background still visible.
+  Temporary instrumentation is outside the repository and is not deployed.
+
+### Earlier upgrade checks (before restoring persistent particles)
 
 - `node --check main.js`, `node --check scene.js`, `git diff --check` passed.
   No build or TypeScript check applies to these four static assets.

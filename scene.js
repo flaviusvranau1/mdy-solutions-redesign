@@ -1,284 +1,585 @@
-/* MDY Solutions — scenă WebGL persistentă (Three.js r128, global THREE)
-   Nucleu-scut (sferă fresnel) + carcasă icosaedrică cu noduri și impulsuri
-   care circulă pe muchii + inele orbitale cu sateliți + câmp de particule.
-   Parallax la mouse, dizolvare la scroll, fallback CSS fără WebGL. */
+/* MDY — studio-lit kinetic sculpture. Three.js r128; procedural assets only. */
 (function () {
-  'use strict';
-  var canvas = document.getElementById('scene');
-  if (!canvas) return;
-  var root = document.documentElement;
-  if (!window.THREE) { root.classList.add('no-webgl'); return; }
-
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var css = getComputedStyle(root);
-  function cssColor(name, fallback) {
-    var v = css.getPropertyValue(name).trim();
-    return new THREE.Color(v || fallback);
+  "use strict";
+  var root = document.documentElement,
+    canvas = document.getElementById("scene"),
+    stage = document.querySelector(".hero-stage");
+  if (!canvas || !stage) return;
+  if (!window.THREE) {
+    root.classList.add("no-webgl");
+    return;
   }
-  var C_ACCENT = cssColor('--accent', '#4f7cff');
-  var C_GLOW   = cssColor('--glow',   '#7fe0ff');
-  var C_SIGNAL = cssColor('--signal', '#ffb454');
-
-  var renderer;
+  var motion = matchMedia("(prefers-reduced-motion: reduce)"),
+    reduced = motion.matches;
+  var compact = matchMedia("(max-width: 900px)").matches;
+  var renderer,
+    environment,
+    observer,
+    frameId = 0,
+    visible = false,
+    lost = false,
+    lastTime = 0,
+    elapsed = 0;
+  var intro = reduced ? 1 : 0,
+    pointer = { x: 0, y: 0 },
+    smooth = { x: 0, y: 0 };
+  var quality = 1,
+    samples = 0,
+    totalTime = 0,
+    TAU = Math.PI * 2,
+    seed = 4821;
+  function random() {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  }
+  function damp(a, b, speed, dt) {
+    return a + (b - a) * (1 - Math.exp(-speed * dt));
+  }
   try {
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-  } catch (e) { root.classList.add('no-webgl'); return; }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setClearColor(0x000000, 0);
-  root.classList.add('has-webgl');
+    renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: "default",
+    });
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    var scene = new THREE.Scene(),
+      camera = new THREE.PerspectiveCamera(39, 1, 0.1, 40);
+    camera.position.set(0, 0.15, 8.8);
+    var core = new THREE.Group();
+    scene.add(core);
 
-  var scene  = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-  camera.position.set(0, 0, 9);
-
-  /* ---------- sprite radial generat procedural (fără imagini externe) ---------- */
-  function makeSprite() {
-    var c = document.createElement('canvas'); c.width = c.height = 64;
-    var g = c.getContext('2d');
-    var grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(255,255,255,1)');
-    grd.addColorStop(0.3, 'rgba(255,255,255,0.7)');
-    grd.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
-    return new THREE.CanvasTexture(c);
-  }
-  var sprite = makeSprite();
-
-  /* ---------- nucleul: grup ---------- */
-  var core = new THREE.Group();
-  scene.add(core);
-  var fadeables = []; /* { mat, base } */
-  function track(mat, base) { fadeables.push({ mat: mat, base: base }); return mat; }
-
-  /* sferă interioară — shader fresnel + linie de scanare + meridiane fine */
-  var innerMat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uOpacity: { value: 1 },
-      uColorA: { value: C_ACCENT },
-      uColorB: { value: C_GLOW }
-    },
-    vertexShader: [
-      'varying vec3 vNormal; varying vec3 vPos; varying vec3 vView;',
-      'void main(){',
-      '  vNormal = normalize(normalMatrix * normal);',
-      '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
-      '  vView = normalize(-mv.xyz);',
-      '  vPos = position;',
-      '  gl_Position = projectionMatrix * mv;',
-      '}'
-    ].join('\n'),
-    fragmentShader: [
-      'uniform float uTime; uniform float uOpacity; uniform vec3 uColorA; uniform vec3 uColorB;',
-      'varying vec3 vNormal; varying vec3 vPos; varying vec3 vView;',
-      'void main(){',
-      '  float fres = pow(1.0 - max(dot(normalize(vNormal), normalize(vView)), 0.0), 2.4);',
-      '  float scanY = sin(uTime * 0.55) * 0.95;',
-      '  float band = 1.0 - smoothstep(0.0, 0.05, abs(vPos.y - scanY));',
-      '  float lat = 1.0 - smoothstep(0.0, 0.06, abs(fract(vPos.y * 5.0 + 0.5) - 0.5));',
-      '  float lon = 1.0 - smoothstep(0.0, 0.06, abs(fract(atan(vPos.z, vPos.x) * 2.5 + 0.5) - 0.5));',
-      '  vec3 base = vec3(0.016, 0.03, 0.07);',
-      '  vec3 col = mix(base, uColorA, fres * 0.85);',
-      '  col += uColorA * (lat + lon) * 0.08 * (0.4 + fres);',
-      '  col += uColorB * band * 1.6;',
-      '  float alpha = (0.55 + fres * 0.45) * uOpacity;',
-      '  gl_FragColor = vec4(col, alpha);',
-      '}'
-    ].join('\n'),
-    transparent: true, depthWrite: true
-  });
-  var inner = new THREE.Mesh(new THREE.IcosahedronGeometry(1.05, 4), innerMat);
-  core.add(inner);
-
-  /* carcasă: muchii + noduri */
-  var shellGeo = new THREE.IcosahedronGeometry(1.75, 1);
-  var edgesGeo = new THREE.EdgesGeometry(shellGeo);
-  var shellMat = track(new THREE.LineBasicMaterial({ color: C_ACCENT, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }), 0.32);
-  core.add(new THREE.LineSegments(edgesGeo, shellMat));
-
-  var ep = edgesGeo.attributes.position.array;
-  var verts = [], vIndex = {}, edges = [];
-  function key(x, y, z) { return x.toFixed(3) + ',' + y.toFixed(3) + ',' + z.toFixed(3); }
-  function addV(x, y, z) {
-    var k = key(x, y, z);
-    if (vIndex[k] === undefined) { vIndex[k] = verts.length; verts.push(new THREE.Vector3(x, y, z)); }
-    return vIndex[k];
-  }
-  for (var i = 0; i < ep.length; i += 6) {
-    edges.push([addV(ep[i], ep[i + 1], ep[i + 2]), addV(ep[i + 3], ep[i + 4], ep[i + 5])]);
-  }
-  var adj = verts.map(function () { return []; });
-  edges.forEach(function (e, idx) { adj[e[0]].push(idx); adj[e[1]].push(idx); });
-
-  var nodeGeo = new THREE.BufferGeometry().setFromPoints(verts);
-  var nodeMat = track(new THREE.PointsMaterial({ size: 0.11, map: sprite, color: C_GLOW, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }), 0.9);
-  core.add(new THREE.Points(nodeGeo, nodeMat));
-
-  /* impulsuri care circulă pe muchii (semnalul în rețea) */
-  var PULSES = 16, pulses = [];
-  function newPulse(fromV) {
-    var e, ed, a, b;
-    if (fromV === undefined) {
-      e = Math.floor(Math.random() * edges.length); ed = edges[e];
-      if (Math.random() < 0.5) { a = ed[0]; b = ed[1]; } else { a = ed[1]; b = ed[0]; }
-      return { a: a, b: b, t: Math.random(), speed: 0.45 + Math.random() * 0.55 };
+    // Bake softbox reflections once; the studio is never drawn per animation frame.
+    function makeEnvironment() {
+      var studio = new THREE.Scene();
+      studio.background = new THREE.Color(0x142534);
+      var geometry = new THREE.PlaneGeometry(1, 1);
+      function panel(x, y, z, w, h, color, intensity) {
+        var mesh = new THREE.Mesh(
+          geometry,
+          new THREE.MeshBasicMaterial({
+            color: new THREE.Color(color).multiplyScalar(intensity),
+            side: THREE.DoubleSide,
+          }),
+        );
+        mesh.position.set(x, y, z);
+        mesh.scale.set(w, h, 1);
+        mesh.lookAt(0, 0, 0);
+        studio.add(mesh);
+      }
+      panel(-3, 4, 4, 3, 5, 0xe2faff, 3.5);
+      panel(4, 1, 2, 1.2, 5, 0x36cfd5, 2.3);
+      panel(0, 5, -3, 4, 2, 0xb4cddd, 2.5);
+      panel(-4, -1, -2, 2, 3, 0x168b94, 1.8);
+      panel(3, -2, -4, 1, 3, 0xffc487, 1.6);
+      var pmrem = new THREE.PMREMGenerator(renderer),
+        result = pmrem.fromScene(studio, 0.025, 0.1, 30);
+      studio.children.forEach(function (mesh) {
+        mesh.material.dispose();
+      });
+      geometry.dispose();
+      pmrem.dispose();
+      return result;
     }
-    var list = adj[fromV]; e = list[Math.floor(Math.random() * list.length)]; ed = edges[e];
-    a = fromV; b = (ed[0] === a) ? ed[1] : ed[0];
-    return { a: a, b: b, t: 0, speed: 0.45 + Math.random() * 0.55 };
-  }
-  for (i = 0; i < PULSES; i++) pulses.push(newPulse());
-  var pulseArr = new Float32Array(PULSES * 3);
-  var pulseGeo = new THREE.BufferGeometry();
-  pulseGeo.setAttribute('position', new THREE.BufferAttribute(pulseArr, 3));
-  var pulseMat = track(new THREE.PointsMaterial({ size: 0.2, map: sprite, color: C_GLOW, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }), 1);
-  core.add(new THREE.Points(pulseGeo, pulseMat));
-  var tmpV = new THREE.Vector3();
-  function updatePulses(dt) {
-    for (var k = 0; k < PULSES; k++) {
-      var p = pulses[k]; p.t += dt * p.speed;
-      if (p.t >= 1) { pulses[k] = p = newPulse(p.b); }
-      tmpV.copy(verts[p.a]).lerp(verts[p.b], p.t);
-      pulseArr[k * 3] = tmpV.x; pulseArr[k * 3 + 1] = tmpV.y; pulseArr[k * 3 + 2] = tmpV.z;
+    environment = makeEnvironment();
+    scene.environment = environment.texture;
+    scene.add(new THREE.HemisphereLight(0xc4faff, 0x071521, 0.65));
+    function light(color, intensity, x, y, z) {
+      var lamp = new THREE.DirectionalLight(color, intensity);
+      lamp.position.set(x, y, z);
+      scene.add(lamp);
     }
-    pulseGeo.attributes.position.needsUpdate = true;
-  }
+    light(0xd8faff, 2.4, -3, 4, 5);
+    light(0x19cbd3, 1.8, 4, 0, -2);
+    light(0xffba76, 0.65, -3, -2, 1);
 
-  /* halou moale în spate */
-  var haloMat = track(new THREE.SpriteMaterial({ map: sprite, color: C_ACCENT, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }), 0.28);
-  var halo = new THREE.Sprite(haloMat); halo.scale.setScalar(7.5); halo.position.z = -0.5;
-  core.add(halo);
-
-  /* inele orbitale cu sateliți */
-  function makeRing(radius, tiltX, tiltZ, color, opacity, satColor) {
-    var g = new THREE.Group();
-    var ringMat = track(new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity, blending: THREE.AdditiveBlending, depthWrite: false }), opacity);
-    g.add(new THREE.Mesh(new THREE.TorusGeometry(radius, 0.011, 8, 260), ringMat));
-    var sGeo = new THREE.BufferGeometry();
-    sGeo.setAttribute('position', new THREE.Float32BufferAttribute([radius, 0, 0], 3));
-    var sMat = track(new THREE.PointsMaterial({ size: 0.26, map: sprite, color: satColor, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }), 1);
-    var sat = new THREE.Points(sGeo, sMat);
-    g.add(sat);
-    g.rotation.x = tiltX; g.rotation.z = tiltZ;
-    g.userData = { sat: sat, radius: radius, phase: Math.random() * 6.283, speed: 0.22 + Math.random() * 0.18, dir: Math.random() < 0.5 ? 1 : -1 };
-    return g;
-  }
-  var ringA = makeRing(2.35, 1.25, 0.35, C_ACCENT, 0.55, C_GLOW);
-  var ringB = makeRing(2.75, -0.55, 1.0, C_ACCENT, 0.35, C_SIGNAL);
-  core.add(ringA); core.add(ringB);
-  function updateRing(g, t) {
-    var u = g.userData, a = u.phase + t * u.speed * u.dir;
-    u.sat.position.set(Math.cos(a) * u.radius, Math.sin(a) * u.radius, 0);
-    g.rotation.y += 0.0006 * u.dir;
-  }
-
-  function setFade(f) {
-    for (var k = 0; k < fadeables.length; k++) fadeables[k].mat.opacity = fadeables[k].base * f;
-    innerMat.uniforms.uOpacity.value = f;
-  }
-
-  /* ---------- câmp de particule ambientale (toată pagina) ---------- */
-  var N = 1600, pPos = new Float32Array(N * 3), pSize = new Float32Array(N), pPhase = new Float32Array(N);
-  for (i = 0; i < N; i++) {
-    pPos[i * 3] = (Math.random() - 0.5) * 30;
-    pPos[i * 3 + 1] = (Math.random() - 0.5) * 18;
-    pPos[i * 3 + 2] = -14 + Math.random() * 16;
-    pSize[i] = 0.6 + Math.pow(Math.random(), 3) * 3.2;
-    pPhase[i] = Math.random() * 6.283;
-  }
-  var pGeo = new THREE.BufferGeometry();
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-  pGeo.setAttribute('aSize', new THREE.BufferAttribute(pSize, 1));
-  pGeo.setAttribute('aPhase', new THREE.BufferAttribute(pPhase, 1));
-  var pMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uScroll: { value: 0 }, uPixelRatio: { value: renderer.getPixelRatio() }, uColor: { value: C_GLOW }, uOpacity: { value: 1 } },
-    vertexShader: [
-      'attribute float aSize; attribute float aPhase;',
-      'uniform float uTime; uniform float uScroll; uniform float uPixelRatio;',
-      'varying float vAlpha;',
-      'void main(){',
-      '  vec3 p = position;',
-      '  p.x += cos(uTime * 0.12 + aPhase * 1.7) * 0.25;',
-      '  p.y += sin(uTime * 0.16 + aPhase) * 0.25 + uScroll;',
-      '  p.y = mod(p.y + 9.0, 18.0) - 9.0;',
-      '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
-      '  gl_Position = projectionMatrix * mv;',
-      '  gl_PointSize = aSize * uPixelRatio * (34.0 / -mv.z);',
-      '  vAlpha = 0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * 0.9 + aPhase * 6.0));',
-      '}'
-    ].join('\n'),
-    fragmentShader: [
-      'uniform vec3 uColor; uniform float uOpacity; varying float vAlpha;',
-      'void main(){',
-      '  float d = length(gl_PointCoord - 0.5);',
-      '  float a = smoothstep(0.5, 0.05, d); a *= a;',
-      '  gl_FragColor = vec4(uColor, a * vAlpha * 0.55 * uOpacity);',
-      '}'
-    ].join('\n'),
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
-  });
-  scene.add(new THREE.Points(pGeo, pMat));
-
-  /* ---------- layout / input ---------- */
-  var baseX = 2.4, baseScale = 0.85, baseOpacity = 1, heroH = 800;
-  var mouse = { x: 0, y: 0 }, smooth = { x: 0, y: 0 };
-  function layout() {
-    var w = window.innerWidth, h = window.innerHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h; camera.updateProjectionMatrix();
-    var narrow = w < 900;
-    baseX = narrow ? 0 : 2.35 * Math.min(Math.max(camera.aspect / 1.6, 0.7), 1.15);
-    baseScale = narrow ? 0.58 : (camera.aspect < 1.3 ? 0.72 : 0.85);
-    baseOpacity = narrow ? 0.6 : 1;
-    var hero = document.getElementById('hero');
-    heroH = hero ? hero.offsetHeight : h;
-    pMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
-  }
-  window.addEventListener('resize', layout);
-  layout();
-  window.addEventListener('pointermove', function (e) {
-    if (e.pointerType === 'touch') return;
-    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -((e.clientY / window.innerHeight) * 2 - 1);
-  }, { passive: true });
-
-  /* ---------- buclă ---------- */
-  var clock = new THREE.Clock();
-  var pageFade = 0; /* intro: nucleul se asamblează */
-  function frame() {
-    var dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
-    if (pageFade < 1) pageFade = Math.min(1, pageFade + dt * 0.7);
-    smooth.x += (mouse.x - smooth.x) * 0.045;
-    smooth.y += (mouse.y - smooth.y) * 0.045;
-    var sy = window.scrollY || window.pageYOffset || 0;
-    var p = Math.min(Math.max(sy / (heroH * 0.9), 0), 1);
-    var fade = (1 - p) * pageFade;
-    core.visible = fade > 0.01;
-    if (core.visible) {
-      var ease = 1 - Math.pow(1 - pageFade, 3);
-      core.position.set(baseX, p * 2.4 - (1 - ease) * 0.6, 0);
-      core.scale.setScalar(baseScale * (0.7 + 0.3 * ease) * (1 - 0.3 * p));
-      core.rotation.y = t * 0.11 + smooth.x * 0.45;
-      core.rotation.x = smooth.y * 0.28 + Math.sin(t * 0.3) * 0.05;
-      setFade(fade * baseOpacity);
-      innerMat.uniforms.uTime.value = t;
-      updatePulses(dt);
-      updateRing(ringA, t); updateRing(ringB, t);
+    var glowCanvas = document.createElement("canvas");
+    glowCanvas.width = glowCanvas.height = 64;
+    var ctx = glowCanvas.getContext("2d"),
+      gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, "#fff");
+    gradient.addColorStop(0.14, "rgba(255,255,255,.85)");
+    gradient.addColorStop(0.42, "rgba(255,255,255,.18)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+    var sprite = new THREE.CanvasTexture(glowCanvas);
+    // Machined grooves underneath a clear coated metallic surface.
+    var surface = document.createElement("canvas");
+    surface.width = 1024;
+    surface.height = 512;
+    ctx = surface.getContext("2d");
+    ctx.fillStyle = "#b5b5b5";
+    ctx.fillRect(0, 0, 1024, 512);
+    ctx.strokeStyle = "#777";
+    ctx.lineWidth = 1.5;
+    for (var i = 1; i < 12; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, (i * 512) / 12);
+      ctx.lineTo(1024, (i * 512) / 12);
+      ctx.stroke();
     }
-    pMat.uniforms.uTime.value = t;
-    pMat.uniforms.uScroll.value = sy * 0.0022;
-    pMat.uniforms.uOpacity.value = pageFade;
-    camera.position.x += (smooth.x * 0.35 - camera.position.x) * 0.05;
-    camera.position.y += (smooth.y * 0.22 - camera.position.y) * 0.05;
-    camera.lookAt(0, 0, 0);
-    renderer.render(scene, camera);
-  }
-  if (reduceMotion) {
-    pageFade = 1;
-    frame();
-    window.addEventListener('scroll', frame, { passive: true });
-    window.addEventListener('resize', frame);
-  } else {
-    renderer.setAnimationLoop(frame);
+    for (i = 0; i < 24; i++) {
+      ctx.beginPath();
+      ctx.moveTo((i * 1024) / 24, 0);
+      ctx.lineTo((i * 1024) / 24, 512);
+      ctx.stroke();
+    }
+    var sphereMat = new THREE.MeshPhysicalMaterial({
+      color: 0x245661,
+      metalness: 0.86,
+      roughness: 0.24,
+      clearcoat: 1,
+      clearcoatRoughness: 0.16,
+      envMapIntensity: 1.35,
+      bumpMap: new THREE.CanvasTexture(surface),
+      bumpScale: 0.018,
+    });
+    var inner = new THREE.Mesh(
+      new THREE.SphereGeometry(1.08, 64, 40),
+      sphereMat,
+    );
+    sphereMat.color.convertSRGBToLinear();
+    core.add(inner);
+    var scanMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(0x55e6e5) },
+      },
+      vertexShader:
+        "varying vec3 vPos; varying vec3 vNormal; varying vec3 vView; void main(){vPos=position; vNormal=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vView=-mv.xyz; gl_Position=projectionMatrix*mv;}",
+      fragmentShader:
+        "uniform float uTime; uniform vec3 uColor; varying vec3 vPos; varying vec3 vNormal; varying vec3 vView; void main(){float f=pow(1.0-max(dot(normalize(vNormal),normalize(vView)),0.0),3.5); float b=1.0-smoothstep(0.003,0.028,abs(vPos.y-sin(uTime*0.32)*0.93)); gl_FragColor=vec4(uColor,f*0.28+b*0.5);}",
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    core.add(new THREE.Mesh(new THREE.SphereGeometry(1.086, 64, 40), scanMat));
+    var metal = new THREE.MeshStandardMaterial({
+      color: 0x45616d,
+      metalness: 0.95,
+      roughness: 0.24,
+      envMapIntensity: 1.6,
+    });
+    metal.color.convertSRGBToLinear();
+    var silver = new THREE.MeshStandardMaterial({
+      color: 0xb9d4dc,
+      metalness: 0.9,
+      roughness: 0.2,
+    });
+    var luminous = new THREE.MeshBasicMaterial({
+      color: 0x72f7ed,
+      toneMapped: false,
+    });
+    var badge = new THREE.Group();
+    badge.position.z = 1.025;
+    var hex = new THREE.Shape();
+    for (i = 0; i < 6; i++) {
+      var a = (i / 6) * TAU + Math.PI / 6;
+      if (!i) hex.moveTo(Math.cos(a) * 0.34, Math.sin(a) * 0.34);
+      else hex.lineTo(Math.cos(a) * 0.34, Math.sin(a) * 0.34);
+    }
+    hex.closePath();
+    badge.add(
+      new THREE.Mesh(
+        new THREE.ExtrudeGeometry(hex, {
+          depth: 0.045,
+          bevelEnabled: true,
+          bevelSegments: 3,
+          steps: 1,
+          bevelSize: 0.014,
+          bevelThickness: 0.014,
+        }),
+        metal,
+      ),
+    );
+    var mark = [
+      [-0.16, -0.14],
+      [-0.16, 0.13],
+      [0, -0.015],
+      [0.16, 0.13],
+      [0.16, -0.14],
+    ].map(function (p) {
+      return new THREE.Vector3(p[0], p[1], 0.071);
+    });
+    for (i = 0; i < mark.length - 1; i++)
+      badge.add(
+        new THREE.Mesh(
+          new THREE.TubeGeometry(
+            new THREE.LineCurve3(mark[i], mark[i + 1]),
+            1,
+            0.015,
+            6,
+            false,
+          ),
+          luminous,
+        ),
+      );
+    core.add(badge);
+
+    var shellGeo = new THREE.IcosahedronGeometry(1.6, 1),
+      edgesGeo = new THREE.EdgesGeometry(shellGeo);
+    shellGeo.dispose();
+    var cage = new THREE.Group();
+    core.add(cage);
+    cage.add(
+      new THREE.LineSegments(
+        edgesGeo,
+        new THREE.LineBasicMaterial({
+          color: 0x36aeb9,
+          transparent: true,
+          opacity: 0.22,
+          depthWrite: false,
+        }),
+      ),
+    );
+    var positions = edgesGeo.attributes.position.array,
+      vertices = [],
+      ids = {},
+      edges = [];
+    function vertex(x, y, z) {
+      var id = x.toFixed(4) + "," + y.toFixed(4) + "," + z.toFixed(4);
+      if (ids[id] === undefined) {
+        ids[id] = vertices.length;
+        vertices.push(new THREE.Vector3(x, y, z));
+      }
+      return ids[id];
+    }
+    for (i = 0; i < positions.length; i += 6)
+      edges.push([
+        vertex(positions[i], positions[i + 1], positions[i + 2]),
+        vertex(positions[i + 3], positions[i + 4], positions[i + 5]),
+      ]);
+    // All solid nodes share one draw call.
+    var nodes = new THREE.InstancedMesh(
+        new THREE.SphereGeometry(0.032, 10, 8),
+        silver,
+        vertices.length,
+      ),
+      matrix = new THREE.Matrix4();
+    vertices.forEach(function (v, index) {
+      matrix.makeTranslation(v.x, v.y, v.z);
+      nodes.setMatrixAt(index, matrix);
+    });
+    cage.add(nodes);
+    cage.add(
+      new THREE.Points(
+        new THREE.BufferGeometry().setFromPoints(vertices),
+        new THREE.PointsMaterial({
+          map: sprite,
+          color: 0x68eee5,
+          size: 0.085,
+          transparent: true,
+          opacity: 0.6,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      ),
+    );
+    var adjacency = vertices.map(function () {
+      return [];
+    });
+    edges.forEach(function (e) {
+      adjacency[e[0]].push(e[1]);
+      adjacency[e[1]].push(e[0]);
+    });
+    var pulses = [],
+      pulseCount = compact ? 7 : 12,
+      trailLength = 5;
+    for (i = 0; i < pulseCount; i++) {
+      var edge = edges[Math.floor(random() * edges.length)];
+      pulses.push({
+        a: edge[0],
+        b: edge[1],
+        progress: random(),
+        speed: 0.24 + random() * 0.25,
+      });
+    }
+    var pulseArray = new Float32Array(pulseCount * trailLength * 3),
+      pulseColors = new Float32Array(pulseArray.length),
+      pulseColor = new THREE.Color(0x8ff7f7);
+    for (i = 0; i < pulseCount * trailLength; i++) {
+      var strength = 1 - (i % trailLength) / trailLength;
+      pulseColors[i * 3] = pulseColor.r * strength;
+      pulseColors[i * 3 + 1] = pulseColor.g * strength;
+      pulseColors[i * 3 + 2] = pulseColor.b * strength;
+    }
+    var pulseGeo = new THREE.BufferGeometry();
+    pulseGeo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(pulseArray, 3).setUsage(THREE.DynamicDrawUsage),
+    );
+    pulseGeo.setAttribute("color", new THREE.BufferAttribute(pulseColors, 3));
+    var pulsePoints = new THREE.Points(
+      pulseGeo,
+      new THREE.PointsMaterial({
+        size: 0.11,
+        map: sprite,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    pulsePoints.frustumCulled = false;
+    cage.add(pulsePoints);
+    var temp = new THREE.Vector3();
+    function updatePulses(dt) {
+      pulses.forEach(function (p, index) {
+        p.progress += dt * p.speed;
+        if (p.progress >= 1) {
+          p.progress -= 1;
+          var previous = p.a;
+          p.a = p.b;
+          var choices = adjacency[p.a].filter(function (v) {
+            return v !== previous;
+          });
+          p.b = choices[Math.floor(random() * choices.length)];
+        }
+        for (var j = 0; j < trailLength; j++) {
+          temp
+            .copy(vertices[p.a])
+            .lerp(vertices[p.b], Math.max(0, p.progress - j * 0.035));
+          temp.toArray(pulseArray, (index * trailLength + j) * 3);
+        }
+      });
+      pulseGeo.attributes.position.needsUpdate = true;
+    }
+
+    function makeOrbit(radius, tiltX, tiltZ, phase, speed, warm) {
+      var group = new THREE.Group();
+      group.rotation.set(tiltX, 0, tiltZ);
+      group.add(
+        new THREE.Mesh(new THREE.TorusGeometry(radius, 0.024, 8, 160), metal),
+      );
+      var rail = new THREE.Mesh(
+        new THREE.TorusGeometry(radius, 0.005, 6, 160),
+        luminous,
+      );
+      rail.position.z = 0.023;
+      group.add(rail);
+      var arc = new THREE.Mesh(
+        new THREE.TorusGeometry(radius + 0.047, 0.008, 6, 80, Math.PI * 0.62),
+        silver,
+      );
+      arc.rotation.z = phase;
+      group.add(arc);
+      var sat = new THREE.Group();
+      sat.add(new THREE.Mesh(new THREE.SphereGeometry(0.082, 16, 12), silver));
+      var glow = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: sprite,
+          color: warm ? 0xffbe7a : 0x8ff7f7,
+          transparent: true,
+          opacity: 0.85,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      glow.scale.setScalar(0.39);
+      sat.add(glow);
+      group.add(sat);
+      // Geometry is centered at zero; only the parent sets orbital position.
+      group.userData = {
+        radius: radius,
+        phase: phase,
+        speed: speed,
+        sat: sat,
+        tilt: tiltX,
+      };
+      core.add(group);
+      return group;
+    }
+    var orbits = [
+      makeOrbit(2.03, 1.08, 0.34, 0.4, 0.2, false),
+      makeOrbit(2.43, -0.73, 0.87, 3.7, -0.13, true),
+    ];
+    function updateOrbits(t) {
+      orbits.forEach(function (o) {
+        var d = o.userData,
+          a = d.phase + t * d.speed;
+        d.sat.position.set(Math.cos(a) * d.radius, Math.sin(a) * d.radius, 0);
+        o.rotation.y = Math.sin(t * 0.09 + d.phase) * 0.12;
+        o.rotation.x = d.tilt + Math.sin(t * 0.12) * 0.045;
+      });
+    }
+    var halo = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: sprite,
+        color: 0x1697a4,
+        transparent: true,
+        opacity: 0.12,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    halo.position.z = -2;
+    halo.scale.setScalar(6.8);
+    scene.add(halo);
+    var dustVertices = [];
+    for (i = 0; i < (compact ? 60 : 140); i++)
+      dustVertices.push(
+        (random() - 0.5) * 10,
+        (random() - 0.5) * 8,
+        -4 + random() * 4,
+      );
+    var dust = new THREE.Points(
+      new THREE.BufferGeometry().setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(dustVertices, 3),
+      ),
+      new THREE.PointsMaterial({
+        size: 0.026,
+        map: sprite,
+        color: 0x83c8cf,
+        opacity: 0.4,
+        transparent: true,
+        depthWrite: false,
+      }),
+    );
+    scene.add(dust);
+
+    function layout() {
+      var w = stage.clientWidth,
+        h = stage.clientHeight;
+      if (!w || !h || lost) return;
+      renderer.setPixelRatio(
+        Math.min(
+          devicePixelRatio || 1,
+          compact ? 1.4 : 1.8,
+          Math.sqrt(1400000 / (w * h)),
+        ) * quality,
+      );
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.position.z =
+        camera.aspect < 0.95 ? (8.8 * 0.95) / camera.aspect : 8.8;
+      camera.updateProjectionMatrix();
+      if (reduced || !visible) render(0);
+    }
+    function render(dt) {
+      if (lost) return;
+      var step = reduced ? 0 : dt;
+      elapsed += step;
+      intro = reduced ? 1 : Math.min(1, intro + step * 0.9);
+      smooth.x = reduced ? 0 : damp(smooth.x, pointer.x, 4.5, dt);
+      smooth.y = reduced ? 0 : damp(smooth.y, pointer.y, 4.5, dt);
+      var ease = 1 - Math.pow(1 - intro, 3);
+      core.scale.setScalar(0.88 + ease * 0.12);
+      core.position.y = -0.16 * (1 - ease) + Math.sin(elapsed * 0.42) * 0.045;
+      core.rotation.x = smooth.y * 0.12 + 0.08;
+      core.rotation.y =
+        smooth.x * 0.22 + Math.sin(elapsed * 0.14) * 0.16 - 0.12;
+      inner.rotation.y = elapsed * 0.035;
+      cage.rotation.y = elapsed * 0.055;
+      cage.rotation.z = 0.16;
+      scanMat.uniforms.uTime.value = elapsed;
+      dust.rotation.y = elapsed * 0.008;
+      updatePulses(step);
+      updateOrbits(elapsed);
+      camera.position.x = smooth.x * 0.14;
+      camera.position.y = 0.15 + smooth.y * 0.1;
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+    }
+    function frame(now) {
+      frameId = 0;
+      if (!visible || document.hidden || lost || reduced) return;
+      var delta = lastTime ? (now - lastTime) / 1000 : 1 / 60;
+      lastTime = now;
+      render(Math.min(delta, 0.05));
+      // Only reduce resolution after sustained slow rendering; no per-frame oscillation.
+      if (intro === 1 && quality === 1 && delta < 0.1) {
+        totalTime += delta;
+        samples++;
+        if (samples === 120) {
+          if (totalTime / samples > 1 / 43) {
+            quality = 0.8;
+            layout();
+          }
+          samples = 0;
+          totalTime = 0;
+        }
+      }
+      frameId = requestAnimationFrame(frame);
+    }
+    function syncLoop() {
+      cancelAnimationFrame(frameId);
+      frameId = 0;
+      lastTime = 0;
+      if (!visible || document.hidden || lost) return;
+      if (reduced) render(0);
+      else frameId = requestAnimationFrame(frame);
+    }
+    stage.addEventListener(
+      "pointermove",
+      function (e) {
+        if (reduced || e.pointerType === "touch") return;
+        var r = stage.getBoundingClientRect();
+        pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        pointer.y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+      },
+      { passive: true },
+    );
+    stage.addEventListener("pointerleave", function () {
+      pointer.x = pointer.y = 0;
+    });
+    document.addEventListener("visibilitychange", syncLoop);
+    motion.addEventListener("change", function (e) {
+      reduced = e.matches;
+      intro = 1;
+      pointer.x = pointer.y = 0;
+      syncLoop();
+    });
+    canvas.addEventListener("webglcontextlost", function (e) {
+      e.preventDefault();
+      lost = true;
+      root.classList.remove("has-webgl");
+      root.classList.add("no-webgl");
+      syncLoop();
+    });
+    canvas.addEventListener("webglcontextrestored", function () {
+      try {
+        environment.dispose();
+        environment = makeEnvironment();
+        scene.environment = environment.texture;
+        lost = false;
+        layout();
+        render(0);
+        root.classList.remove("no-webgl");
+        root.classList.add("has-webgl");
+        syncLoop();
+      } catch (e) {
+        lost = true;
+      }
+    });
+    if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
+    else window.addEventListener("resize", layout, { passive: true });
+    if (window.IntersectionObserver) {
+      observer = new IntersectionObserver(
+        function (entries) {
+          visible = entries[0].isIntersecting;
+          syncLoop();
+        },
+        { rootMargin: "60px" },
+      );
+      observer.observe(stage);
+    } else visible = true;
+    layout();
+    render(0);
+    root.classList.remove("no-webgl");
+    root.classList.add("has-webgl");
+    syncLoop();
+  } catch (error) {
+    cancelAnimationFrame(frameId);
+    if (observer) observer.disconnect();
+    if (environment) environment.dispose();
+    if (renderer) renderer.dispose();
+    root.classList.remove("has-webgl");
+    root.classList.add("no-webgl");
+    console.warn("MDY: using the static scene fallback.", error);
   }
 })();

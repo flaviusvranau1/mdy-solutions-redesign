@@ -4,6 +4,12 @@ Propunere de site nou pentru [mdysolutions.ro](https://mdysolutions.ro): o pagin
 
 Site live (GitHub Pages): https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
+Actualizare 13.09.2026: nucleu metalic cu reflexii de studio, siglă în relief,
+inele cu volum și mișcare independentă de rata de cadre. Scena se oprește în
+afara ecranului; cardurile și butoanele au inerție mai fină. Pe telefon, 3D-ul
+are un spațiu propriu. Versiunea inițială este păstrată în tag-ul
+`before-3d-upgrade-2026-09-13`. Detalii și undo: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+
 Previzualizare în Claude (Artifact): https://claude.ai/code/artifact/9f79a181-4f26-4d64-b243-715dbf2b059a
 
 ## Ce conține
@@ -12,7 +18,7 @@ Previzualizare în Claude (Artifact): https://claude.ai/code/artifact/9f79a181-4
 |---|---|
 | `index.html` | Pagina completă (conținut, iconițe SVG inline, formular) |
 | `styles.css` | Sistemul de design: tokeni de brand (teal `#19cbd3`, aqua `#8ff7f7`, navy), tipografie, carduri glass, layout responsive |
-| `scene.js` | Scena 3D (Three.js): nucleu cu shader fresnel, rețea de noduri cu impulsuri, inele orbitale, câmp de particule, parallax la mouse și scroll |
+| `scene.js` | Scena 3D (Three.js): materiale fizice, iluminare de studio, siglă în relief, noduri cu impulsuri, inele orbitale, parallax și oprire automată în afara ecranului |
 | `main.js` | Interacțiuni: scroll lin (Lenis), reveal-uri pe linii (GSAP SplitText), traseu orizontal pinned, tilt 3D pe carduri, cursor custom, butoane magnetice, panouri de detalii, formular |
 
 ## Stack

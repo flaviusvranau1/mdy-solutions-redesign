@@ -37,16 +37,19 @@
   function closeMenu() {
     root.classList.remove('menu-open');
     if (burger) burger.setAttribute('aria-expanded', 'false');
+    if (burger) burger.setAttribute('aria-label', 'Deschide meniul');
     if (lenis) lenis.start();
   }
   if (burger) {
     burger.addEventListener('click', function () {
       var open = root.classList.toggle('menu-open');
       burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      burger.setAttribute('aria-label', open ? 'Închide meniul' : 'Deschide meniul');
       if (lenis) { if (open) lenis.stop(); else lenis.start(); }
     });
   }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+  window.addEventListener('resize', function () { if (window.innerWidth > 900 && root.classList.contains('menu-open')) closeMenu(); }, { passive: true });
   document.querySelectorAll('a[href^="#"]').forEach(function (a) {
     a.addEventListener('click', function (e) {
       var id = a.getAttribute('href');
@@ -71,18 +74,29 @@
     cur.innerHTML = '<div class="cursor-dot"></div><div class="cursor-ring"><span class="cursor-label"></span></div>';
     document.body.appendChild(cur);
     var dot = cur.children[0], ring = cur.children[1], label = ring.children[0];
-    var mx = -100, my = -100, rx = -100, ry = -100, shown = false;
-    window.addEventListener('pointermove', function (e) {
-      mx = e.clientX; my = e.clientY;
-      if (!shown) { shown = true; rx = mx; ry = my; cur.classList.add('is-visible'); }
-    }, { passive: true });
-    document.addEventListener('mouseleave', function () { cur.classList.remove('is-visible'); shown = false; });
-    (function loop() {
-      rx += (mx - rx) * 0.16; ry += (my - ry) * 0.16;
+    var mx = -100, my = -100, rx = -100, ry = -100, shown = false, cursorFrame = 0, cursorTime = 0;
+    function cursorLoop(time) {
+      cursorFrame = 0;
+      if (!shown || document.hidden) { cursorTime = 0; return; }
+      var dt = cursorTime ? Math.min((time - cursorTime) / 1000, 0.05) : 1 / 60;
+      cursorTime = time;
+      var blend = 1 - Math.exp(-12 * dt);
+      rx += (mx - rx) * blend; ry += (my - ry) * blend;
       dot.style.transform = 'translate3d(' + mx + 'px,' + my + 'px,0)';
       ring.style.transform = 'translate3d(' + rx + 'px,' + ry + 'px,0)';
-      requestAnimationFrame(loop);
-    })();
+      if (Math.abs(mx - rx) + Math.abs(my - ry) > 0.1) cursorFrame = requestAnimationFrame(cursorLoop);
+      else cursorTime = 0;
+    }
+    window.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch') return;
+      mx = e.clientX; my = e.clientY;
+      if (!shown) { shown = true; rx = mx; ry = my; cur.classList.add('is-visible'); }
+      if (!cursorFrame) cursorFrame = requestAnimationFrame(cursorLoop);
+    }, { passive: true });
+    document.addEventListener('mouseleave', function () { cur.classList.remove('is-visible'); shown = false; });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { cancelAnimationFrame(cursorFrame); cursorFrame = 0; cursorTime = 0; }
+    });
     var hoverSel = 'a, button, [data-cursor], .tilt, input, textarea, select, label';
     document.addEventListener('pointerover', function (e) {
       var t = e.target && e.target.closest ? e.target.closest(hoverSel) : null;
@@ -103,14 +117,18 @@
   /* ---------- butoane magnetice ---------- */
   if (fine && !reduce && G) {
     document.querySelectorAll('.magnetic').forEach(function (el) {
-      var strength = parseFloat(el.getAttribute('data-strength') || '0.35');
+      var strength = parseFloat(el.getAttribute('data-strength') || '0.18');
+      var bounds = null;
+      var moveX = G.quickTo(el, 'x', { duration: 0.4, ease: 'power3.out' });
+      var moveY = G.quickTo(el, 'y', { duration: 0.4, ease: 'power3.out' });
+      el.addEventListener('pointerenter', function () { bounds = el.getBoundingClientRect(); });
       el.addEventListener('pointermove', function (e) {
-        var r = el.getBoundingClientRect();
+        var r = bounds || el.getBoundingClientRect();
         var x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
-        G.to(el, { x: x * strength, y: y * strength, duration: 0.45, ease: 'power3.out' });
+        moveX(x * strength); moveY(y * strength);
       });
       el.addEventListener('pointerleave', function () {
-        G.to(el, { x: 0, y: 0, duration: 0.8, ease: 'elastic.out(1, 0.4)' });
+        moveX(0); moveY(0); bounds = null;
       });
     });
   }
@@ -118,21 +136,31 @@
   /* ---------- carduri cu tilt 3D + reflex ---------- */
   if (fine && !reduce) {
     document.querySelectorAll('.tilt').forEach(function (card) {
-      var r = null;
-      var max = parseFloat(card.getAttribute('data-tilt') || '9');
-      card.addEventListener('pointerenter', function () { r = card.getBoundingClientRect(); card.classList.add('is-tilting'); });
+      var r = null, tiltFrame = 0, tiltTime = 0, active = false;
+      var targetX = 0, targetY = 0, currentX = 0, currentY = 0, mx = 50, my = 50;
+      var max = Math.min(parseFloat(card.getAttribute('data-tilt') || '6'), 7);
+      function drawTilt(time) {
+        tiltFrame = 0;
+        var dt = tiltTime ? Math.min((time - tiltTime) / 1000, 0.05) : 1 / 60;
+        tiltTime = time;
+        var blend = 1 - Math.exp(-13 * dt);
+        currentX += (targetX - currentX) * blend; currentY += (targetY - currentY) * blend;
+        card.style.setProperty('--mx', mx.toFixed(2) + '%'); card.style.setProperty('--my', my.toFixed(2) + '%');
+        card.style.setProperty('--rx', currentX.toFixed(3) + 'deg'); card.style.setProperty('--ry', currentY.toFixed(3) + 'deg');
+        if (Math.abs(targetX - currentX) + Math.abs(targetY - currentY) > 0.008) tiltFrame = requestAnimationFrame(drawTilt);
+        else { tiltTime = 0; if (!active) card.classList.remove('is-tilting'); }
+      }
+      card.addEventListener('pointerenter', function () { r = card.getBoundingClientRect(); active = true; card.classList.add('is-tilting'); });
       card.addEventListener('pointermove', function (e) {
         if (!r) r = card.getBoundingClientRect();
-        var px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-        card.style.setProperty('--mx', (px * 100).toFixed(2) + '%');
-        card.style.setProperty('--my', (py * 100).toFixed(2) + '%');
-        card.style.setProperty('--rx', ((0.5 - py) * max).toFixed(2) + 'deg');
-        card.style.setProperty('--ry', ((px - 0.5) * max * 1.2).toFixed(2) + 'deg');
+        var px = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), py = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+        mx = px * 100; my = py * 100;
+        targetX = (0.5 - py) * max; targetY = (px - 0.5) * max;
+        if (!tiltFrame) tiltFrame = requestAnimationFrame(drawTilt);
       });
       card.addEventListener('pointerleave', function () {
-        card.classList.remove('is-tilting');
-        card.style.setProperty('--rx', '0deg'); card.style.setProperty('--ry', '0deg');
-        r = null;
+        active = false; targetX = targetY = 0; r = null;
+        if (!tiltFrame) tiltFrame = requestAnimationFrame(drawTilt);
       });
     });
   }
@@ -227,10 +255,10 @@
   /* reveal-uri generice */
   document.querySelectorAll('[data-reveal]').forEach(function (el) {
     var delay = parseFloat(el.getAttribute('data-reveal') || '0');
-    G.from(el, { y: 36, opacity: 0, duration: 1.1, delay: delay, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
+    G.from(el, { y: 28, opacity: 0, duration: 0.9, delay: delay, ease: 'power3.out', clearProps: 'transform', scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
   });
   document.querySelectorAll('[data-reveal-group]').forEach(function (grp) {
-    G.from(grp.children, { y: 40, opacity: 0, duration: 1, stagger: 0.09, ease: 'power3.out', scrollTrigger: { trigger: grp, start: 'top 86%', once: true } });
+    G.from(grp.children, { y: 30, opacity: 0, duration: 0.9, stagger: 0.075, ease: 'power3.out', clearProps: 'transform', scrollTrigger: { trigger: grp, start: 'top 86%', once: true } });
   });
   document.querySelectorAll('[data-line]').forEach(function (el) {
     G.from(el, { scaleX: 0, transformOrigin: 'left center', duration: 1.2, ease: 'power3.inOut', scrollTrigger: { trigger: el, start: 'top 90%', once: true } });
@@ -311,11 +339,7 @@
         scrub: 0.65, pin: pin, anticipatePin: 1, invalidateOnRefresh: true
       }
     });
-    var steps = track.querySelectorAll('.step');
-    steps.forEach(function (s) {
-      G.from(s.querySelector('.step-num'), { scale: 0.6, opacity: 0, duration: 0.8, ease: 'power3.out',
-        scrollTrigger: { trigger: s, containerAnimation: tween, start: 'left 80%', once: true } });
-    });
+    // Keep step numbers visible when arriving directly at #proces or restoring scroll.
     return function () { tween.kill(); };
   });
   mm.add('(max-width: 1023px)', function () {

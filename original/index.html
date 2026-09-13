@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05111d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Cpath d=%27M20 3l14 8v18l-14 8-14-8V11l14-8z%27 fill=%27%2305111d%27 stroke=%27%2319cbd3%27 stroke-width=%272%27/%3E%3Cpath d=%27M12 27V14l8 7 8-7v13%27 fill=%27none%27 stroke=%27%23e8f3f8%27 stroke-width=%272.4%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<title>MDY Solutions</title>
+<meta name="description" content="MDY Solutions — software integrat, infrastructură & cloud, cyber security și servicii IT administrate pentru companii. Digitalizare completă, de la consultanță la suport continuu.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ff7f7"/>
+      <stop offset="1" stop-color="#19cbd3"/>
+    </linearGradient>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"/><path d="M9.5 12l2 2 3.5-4"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4"/><path d="M16 8l4 4-4 4"/><path d="M14 5l-4 14"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 00.5-7.97A5.5 5.5 0 006.6 9.2 4.4 4.4 0 007 18z"/><path d="M8 21h8M12 18v3"/></symbol>
+    <symbol id="i-data" viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-8M22 19H2"/><path d="M4 10l6-5 6 3 6-4"/></symbol>
+    <symbol id="i-nodes" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 11l10-4M7 13l10 4"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/><path d="M3 17l9 5 9-5"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5a5 5 0 016 5.5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+    <symbol id="i-plan" viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 11h16M10 11v8M4 5l4-2h12"/></symbol>
+    <symbol id="i-build" viewBox="0 0 24 24"><path d="M14 4l6 6-9 9H5v-6l9-9z"/><path d="M12 6l6 6"/><path d="M3 21h18"/></symbol>
+    <symbol id="i-support" viewBox="0 0 24 24"><path d="M4 13v-2a8 8 0 0116 0v2"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19a3 3 0 01-3 3h-3"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 01-14.5 4.6"/><path d="M4 12a8 8 0 0114.5-4.6"/><path d="M4 20v-4h4"/><path d="M20 4v4h-4"/></symbol>
+    <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 21V10l6 4v-4l6 4v-4l6 4v7z"/><path d="M7 21v-4h3v4M14 21v-4h3v4"/><path d="M5 10V4h3v6"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 12h18"/></symbol>
+    <symbol id="i-health" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z"/><path d="M8 12h2.5l1.5-2.5 1.5 4 1.5-1.5H16"/></symbol>
+    <symbol id="i-public" viewBox="0 0 24 24"><path d="M3 21h18M5 21V10M19 21V10M9 21v-6h6v6"/><path d="M2 10l10-6 10 6"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h6a3 3 0 013 3v13a2 2 0 00-2-2H4z"/><path d="M20 4h-6a3 3 0 00-3 3v13a2 2 0 012-2h7z"/></symbol>
+  </defs>
+</svg>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-glow a" aria-hidden="true"></div>
+<div class="bg-glow b" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="progress" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top" aria-label="MDY Solutions — acasă">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M20 3l14 8v18l-14 8-14-8V11l14-8z" stroke="url(#g-mark)" stroke-width="1.6" fill="rgba(25,203,211,0.08)"/>
+        <path d="M12 27V14l8 7 8-7v13" stroke="#e8f3f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="14" r="1.8" fill="#8ff7f7"/><circle cx="28" cy="14" r="1.8" fill="#8ff7f7"/><circle cx="20" cy="21" r="1.8" fill="#8ff7f7"/>
+      </svg>
+      <span>MDY<small>Solutions</small></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#solutii">Soluții</a></li>
+      <li><a href="#produse">Produse</a></li>
+      <li><a href="#industrii">Industrii</a></li>
+      <li><a href="#proces">Cum lucrăm</a></li>
+      <li><a href="https://mdysolutions.ro/blog/" target="_blank" rel="noopener">Blog</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="nav-right">
+      <a class="nav-phone" href="tel:+40747072084"><svg aria-hidden="true"><use href="#i-phone"/></svg>0747 072 084</a>
+      <a class="btn btn-primary magnetic" href="#contact">Discută cu noi</a>
+      <button class="nav-burger" type="button" aria-expanded="false" aria-label="Deschide meniul"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ======================= HERO ======================= -->
+  <section class="hero" id="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow hero-eyebrow">Digitalizare completă</p>
+        <h1>
+          <span class="h1-line"><span class="h1-inner">Software integrat.</span></span>
+          <span class="h1-line"><span class="h1-inner">Procese clare.</span></span>
+          <span class="h1-line"><span class="h1-inner text-gradient">Rezultate măsurabile.</span></span>
+        </h1>
+        <p class="lead hero-lead">Conectăm operațiunile, vânzările, logistica și analiza într-un ecosistem modern, construit pentru eficiență și decizii rapide.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg magnetic" href="#solutii" data-cursor="Soluții">Vezi soluțiile <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn-ghost btn-lg magnetic" href="#contact">Discută cu un specialist</a>
+        </div>
+        <ul class="hero-meta">
+          <li>Sute de implementări în industrii diverse</li>
+          <li>Echipe specializate pe fiecare zonă</li>
+          <li>Suport local și know-how aplicat</li>
+        </ul>
+      </div>
+      <div class="hero-stage" aria-hidden="true"><div class="hero-orb"></div></div>
+    </div>
+    <div class="hero-scroll" aria-hidden="true"><i></i>Scroll</div>
+  </section>
+
+  <!-- ======================= INTEGRARE REALĂ ======================= -->
+  <section class="section" id="integrare">
+    <div class="container">
+      <div class="pillars" data-reveal-group>
+        <div class="pillar">
+          <svg class="pillar-glyph" aria-hidden="true"><use href="#i-team"/></svg>
+          <h3>Divizii specializate</h3>
+          <p>Echipe dedicate pe fiecare zonă de business: software, infrastructură și rețea, securitate cibernetică, suport și consultanță.</p>
+        </div>
+        <div class="pillar">
+          <svg class="pillar-glyph" aria-hidden="true"><use href="#i-nodes"/></svg>
+          <h3>Soluții integrate</h3>
+          <p>Sistemele lucrează împreună, iar informația circulă rapid între echipe, operațiuni și management.</p>
+        </div>
+        <div class="pillar">
+          <svg class="pillar-glyph" aria-hidden="true"><use href="#i-target"/></svg>
+          <h3>O singură direcție</h3>
+          <p>Management comun al proiectului, de la consultanță strategică până la implementare, integrare și suport continuu.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= SOLUȚII ======================= -->
+  <section class="section" id="solutii">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Soluții</p>
+        <h2 data-split>Patru direcții. Un singur ecosistem.</h2>
+        <p class="lead">Software, infrastructură, securitate și operare IT, într-o arhitectură integrată, construită în jurul obiectivelor tale de business. Alege o direcție ca să vezi exact ce include.</p>
+      </div>
+
+      <div class="svc-grid" data-reveal-group>
+        <article class="card tilt svc-card" data-svc="software" role="button" tabindex="0" aria-expanded="false" aria-controls="svc-software" data-cursor="Deschide">
+          <div class="svc-icon lift"><svg aria-hidden="true"><use href="#i-code"/></svg></div>
+          <h3>Software &amp; Aplicații</h3>
+          <p>Dezvoltăm, configurăm și integrăm soluții software adaptate proceselor reale din companie.</p>
+          <ul class="svc-list">
+            <li>ERP, CRM, WMS și MES</li>
+            <li>Integrare API și automatizarea fluxurilor</li>
+            <li>BI, dashboard-uri, date și AI aplicat</li>
+          </ul>
+          <span class="svc-more">Detalii <svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </article>
+
+        <article class="card tilt svc-card" data-svc="infra" role="button" tabindex="0" aria-expanded="false" aria-controls="svc-infra" data-cursor="Deschide">
+          <div class="svc-icon lift"><svg aria-hidden="true"><use href="#i-cloud"/></svg></div>
+          <h3>Infrastructură, Cloud &amp; Rețea</h3>
+          <p>Construim și administrăm infrastructuri sigure și scalabile pentru aplicațiile și datele companiei.</p>
+          <ul class="svc-list">
+            <li>Servere Windows/Linux, virtualizare și storage</li>
+            <li>Azure, Microsoft 365 și cloud hibrid</li>
+            <li>Rețea: NGFW, VPN, Wi-Fi enterprise, backup</li>
+          </ul>
+          <span class="svc-more">Detalii <svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </article>
+
+        <article class="card tilt svc-card" data-svc="security" role="button" tabindex="0" aria-expanded="false" aria-controls="svc-security" data-cursor="Deschide">
+          <div class="svc-icon lift"><svg aria-hidden="true"><use href="#i-shield"/></svg></div>
+          <h3>Cyber Security</h3>
+          <p>Protejăm utilizatorii, sistemele și datele prin prevenție, detectare și răspuns continuu.</p>
+          <ul class="svc-list">
+            <li>Audit, hardening și protecția identității</li>
+            <li>Monitorizare și detectare</li>
+            <li>Răspuns la incidente și continuitate</li>
+          </ul>
+          <span class="svc-more">Detalii <svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </article>
+
+        <article class="card tilt svc-card" data-svc="managed" role="button" tabindex="0" aria-expanded="false" aria-controls="svc-managed" data-cursor="Deschide">
+          <div class="svc-icon lift"><svg aria-hidden="true"><use href="#i-support"/></svg></div>
+          <h3>Managed IT &amp; Suport</h3>
+          <p>Monitorizăm, administrăm și menținem sistemele IT, cu suport rapid pentru echipa ta.</p>
+          <ul class="svc-list">
+            <li>Monitorizare 24/7 și patch management</li>
+            <li>Helpdesk și asistență la distanță</li>
+            <li>Consultanță IT: audit, arhitectură, migrare</li>
+          </ul>
+          <span class="svc-more">Detalii <svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </article>
+      </div>
+
+      <div class="svc-details">
+        <div class="card svc-detail" data-svc="software" id="svc-software" hidden>
+          <button class="svc-detail-close" type="button" aria-label="Închide detaliile"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+          <div class="svc-detail-grid">
+            <div>
+              <p class="eyebrow">Software &amp; Aplicații</p>
+              <h3>Aplicații care urmează procesele tale, nu invers.</h3>
+              <p class="lead">Pornim de la activitatea zilnică și livrăm interfețe clare pentru oamenii care introduc, verifică, coordonează și analizează datele. Mai puține operațiuni manuale, date consistente și sisteme care lucrează împreună.</p>
+              <div class="detail-actions"><a class="btn btn-primary magnetic" href="#contact" data-subject="Software & Aplicații">Discută proiectul <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
+            </div>
+            <ul class="detail-list">
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>ERP operațional, WMS și MES</strong> — comenzi, planificare, producție, stocuri, documente și indicatori într-un singur flux.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>CRM și vânzări</strong> — clienți, oportunități, activități, oferte și urmărirea pipeline-ului comercial.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Integrare API și automatizarea fluxurilor</strong> — informația circulă între aplicații fără muncă manuală.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Aplicații și portaluri personalizate</strong> — pentru echipe, parteneri și clienți.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>BI, dashboard-uri și KPI</strong> — rapoarte, alerte operaționale și analiză pe perioade, pe rolul fiecăruia.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Date, automatizare și AI aplicat</strong> — consolidăm sursele de date și automatizăm fluxurile repetitive.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card svc-detail" data-svc="infra" id="svc-infra" hidden>
+          <button class="svc-detail-close" type="button" aria-label="Închide detaliile"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+          <div class="svc-detail-grid">
+            <div>
+              <p class="eyebrow">Infrastructură, Cloud &amp; Rețea</p>
+              <h3>Fundația stabilă pentru aplicații și echipe.</h3>
+              <p class="lead">Proiectăm și administrăm servere, virtualizare, servicii cloud, colaborare, rețea și backup pentru disponibilitate și control. Combinăm resurse locale, virtualizare și cloud în funcție de aplicații, securitate și continuitate.</p>
+              <div class="detail-actions"><a class="btn btn-primary magnetic" href="#contact" data-subject="Infrastructură, Cloud & Rețea">Cere o evaluare <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
+            </div>
+            <ul class="detail-list">
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Windows Server și Linux</strong> — servicii de domeniu, fișiere, aplicații, baze de date și politici centralizate.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>VMware și Hyper-V</strong> — virtualizare pentru consolidare și recuperare rapidă.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Microsoft Azure, Microsoft 365 și Google</strong> — cloud hibrid, identitate, email și colaborare.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Rețea enterprise</strong> — routing și switching, VPN site-to-site și remote, wireless, VLAN și firewall NGFW.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Backup și recuperare</strong> — copii protejate și proceduri testate de restaurare.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Migrare controlată</strong> — mutăm serviciile pas cu pas și verificăm fiecare etapă.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card svc-detail" data-svc="security" id="svc-security" hidden>
+          <button class="svc-detail-close" type="button" aria-label="Închide detaliile"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+          <div class="svc-detail-grid">
+            <div>
+              <p class="eyebrow">Cyber Security</p>
+              <h3>Protecție construită în jurul riscurilor reale.</h3>
+              <p class="lead">Securizăm infrastructura, rețeaua, utilizatorii și datele prin controale coerente, monitorizare și continuitate. Reducem expunerea, controlăm accesul și pregătim recuperarea, astfel încât incidentele să aibă un impact minim.</p>
+              <div class="detail-actions"><a class="btn btn-primary magnetic" href="#contact" data-subject="Cyber Security">Discută cu un specialist <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
+            </div>
+            <ul class="detail-list">
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Audit și evaluare</strong> — inventar, risc și plan de remediere cu priorități.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Infrastructure security</strong> — hardening, endpoint și actualizări pentru servere, stații și servicii critice.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Network security</strong> — control trafic, NGFW, VPN și segmentare.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Protecția identității</strong> — MFA, roluri și politici pentru acces controlat.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Monitorizare</strong> — alerte, jurnale și răspuns rapid la incidente.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Business continuity</strong> — backup și proceduri testate pentru reluarea activității.</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card svc-detail" data-svc="managed" id="svc-managed" hidden>
+          <button class="svc-detail-close" type="button" aria-label="Închide detaliile"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+          <div class="svc-detail-grid">
+            <div>
+              <p class="eyebrow">Managed IT, Suport &amp; Consultanță</p>
+              <h3>Operare IT proactivă pentru continuitatea afacerii.</h3>
+              <p class="lead">Monitorizăm, administrăm și menținem sistemele IT astfel încât echipele să lucreze stabil și să primească suport rapid. Prevenim problemele repetabile, intervenim la incidente și păstrăm infrastructura documentată și actualizată.</p>
+              <div class="detail-actions">
+                <a class="btn btn-primary magnetic" href="#contact" data-subject="Managed IT & Suport">Discută cu noi <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                <a class="btn btn-ghost magnetic" href="mailto:office@mdysolutions.ro?subject=Ticket%20suport%20MDY">Deschide un ticket</a>
+              </div>
+            </div>
+            <ul class="detail-list">
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Monitorizare 24/7</strong> — disponibilitate, capacitate, evenimente, alerte și escaladare.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Administrare servere și rețea</strong> — configurare, actualizări și optimizare pentru servicii critice.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Patch management și mentenanță preventivă</strong> — actualizări planificate, verificări periodice pentru backup și configurații.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Suport utilizatori</strong> — helpdesk, asistență la distanță și urmărirea fiecărei solicitări până la închidere.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Consultanță IT</strong> — audit, arhitectură documentată, licențiere, migrare și optimizarea costurilor.</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span><strong>Raportare clară</strong> — știi mereu ce s-a făcut, ce incidente au apărut și ce urmează.</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= PRODUSE ======================= -->
+  <section class="section" id="produse">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Produse MDY</p>
+        <h2 data-split>Platforme construite pe fluxuri reale.</h2>
+        <p class="lead">Două platforme modulare dezvoltate de MDY, pentru curierat și pentru producție. Configurabile pe procesele companiei tale, cu module pe care le activezi când ai nevoie.</p>
+      </div>
+
+      <div class="products" data-reveal-group>
+        <article class="card tilt product" data-tilt="4">
+          <div class="product-head">
+            <span class="chip chip-accent">Software pentru curierat</span>
+            <h3>MDY Courier Manager</h3>
+            <p>Platformă pentru managementul operațiunilor de curierat: clienți, dispatch, arii curieri, colete, pickup, facturare, profitabilitate și raportare, într-un singur sistem.</p>
+          </div>
+          <div class="product-demo">
+            <div class="demo-top"><span class="demo-title">Dashboard operațional</span><span class="demo-tag">date demonstrative</span></div>
+            <div class="kpis">
+              <div class="kpi"><b><span data-count="1842">0</span></b><span>Livrări azi</span></div>
+              <div class="kpi"><b><span data-count="95.3" data-decimals="1">0</span>%</b><span>Rata la timp</span></div>
+              <div class="kpi"><b><span data-count="416">0</span></b><span>Colete în tranzit</span></div>
+              <div class="kpi"><b><span data-count="58">0</span></b><span>Curieri activi</span></div>
+            </div>
+            <div class="bars" data-bars aria-hidden="true">
+              <i style="--h:42%"></i><i style="--h:55%"></i><i style="--h:48%"></i><i style="--h:70%"></i><i style="--h:64%"></i><i style="--h:82%"></i><i style="--h:76%"></i><i style="--h:90%"></i><i style="--h:68%"></i><i style="--h:58%"></i><i style="--h:74%"></i><i style="--h:86%"></i><i style="--h:62%"></i><i style="--h:50%"></i>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">Dashboard</span><span class="chip">CRM &amp; Comercial</span><span class="chip">Operațional</span><span class="chip">Analize &amp; Rapoarte</span><span class="chip">Arii curieri</span><span class="chip">Administrare</span>
+          </div>
+          <div class="product-foot">
+            <a class="btn btn-primary magnetic" href="#contact" data-subject="Demo MDY Courier Manager">Solicită o demonstrație <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="link-arrow" href="https://mdysolutions.ro/curierat/" target="_blank" rel="noopener">Pagina produsului <svg aria-hidden="true"><use href="#i-ext"/></svg></a>
+          </div>
+        </article>
+
+        <article class="card tilt product" data-tilt="4">
+          <div class="product-head">
+            <span class="chip chip-accent">Software pentru producție</span>
+            <h3>MDY Production Hub</h3>
+            <p>Platformă integrată (ERP operațional) pentru planificarea, monitorizarea și controlul producției. Conectează operațiunile, comenzile, stocurile, raportarea și fluxurile comerciale într-un singur sistem.</p>
+          </div>
+          <div class="product-demo">
+            <div class="demo-top"><span class="demo-title">Planificare producție · săptămâna curentă</span><span class="demo-tag">date demonstrative</span></div>
+            <ul class="orders" data-fills>
+              <li><span>CMD-1048 · Produs Alpha · Linie A</span><b>72%</b><i class="track"><i class="fill" style="--p:72%"></i></i></li>
+              <li><span>CMD-1051 · Produs Beta · Linie B</span><b>46%</b><i class="track"><i class="fill" style="--p:46%"></i></i></li>
+              <li><span>CMD-1053 · Produs Gamma · Linie C</span><b>91%</b><i class="track"><i class="fill" style="--p:91%"></i></i></li>
+              <li><span>CMD-1058 · Produs Delta · Linie D</span><b>28%</b><i class="track"><i class="fill" style="--p:28%"></i></i></li>
+            </ul>
+            <div class="kpis kpis-3">
+              <div class="kpi"><b><span data-count="78">0</span>%</b><span>Utilizare spațiu camion</span></div>
+              <div class="kpi"><b><span data-count="18.2" data-decimals="1">0</span> m³</b><span>Volum încărcat din 23,5</span></div>
+              <div class="kpi"><b><span data-count="184">0</span></b><span>Facturi luna curentă</span></div>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">Operațional</span><span class="chip">Planificare</span><span class="chip">Raportare</span><span class="chip">Financiar</span><span class="chip">CRM &amp; Comenzi</span><span class="chip">Încărcare automată 3D</span>
+          </div>
+          <div class="product-foot">
+            <a class="btn btn-primary magnetic" href="#contact" data-subject="Demo MDY Production Hub">Solicită o demonstrație <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="link-arrow" href="https://mdysolutions.ro/productie/" target="_blank" rel="noopener">Pagina produsului <svg aria-hidden="true"><use href="#i-ext"/></svg></a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= INDUSTRII ======================= -->
+  <section class="section" id="industrii">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Industrii</p>
+        <h2 data-split>Industrii în care livrăm rezultate.</h2>
+        <p class="lead">Înțelegem specificul fiecărei industrii și dezvoltăm soluții adaptate proceselor de business.</p>
+      </div>
+      <div class="ind-grid" data-reveal-group>
+        <article class="card ind"><svg class="ind-glyph" aria-hidden="true"><use href="#i-factory"/></svg><h3>Producție industrială</h3><p>Automatizare, trasabilitate, planificare și control operațional.</p></article>
+        <article class="card ind"><svg class="ind-glyph" aria-hidden="true"><use href="#i-truck"/></svg><h3>Logistică &amp; transport</h3><p>Managementul transporturilor, depozitelor și distribuției.</p></article>
+        <article class="card ind"><svg class="ind-glyph" aria-hidden="true"><use href="#i-package"/></svg><h3>Curierat</h3><p>Soluții software pentru curierat și transport, optimizarea livrărilor și monitorizarea în timp real.</p></article>
+        <article class="card ind"><svg class="ind-glyph" aria-hidden="true"><use href="#i-briefcase"/></svg><h3>Servicii &amp; corporate</h3><p>Digitalizarea proceselor interne și integrarea sistemelor.</p></article>
+        <article class="card ind"><svg class="ind-glyph" aria-hidden="true"><use href="#i-health"/></svg><h3>Sănătate</h3><p>Administrarea informațiilor și securizarea datelor.</p></article>
+        <article class="card ind"><svg class="ind-glyph" aria-hidden="true"><use href="#i-public"/></svg><h3>Sector public</h3><p>Soluții pentru digitalizare, infrastructură și securitate cibernetică.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= PROCES ======================= -->
+  <section class="process" id="proces">
+    <div class="process-pin">
+      <div class="process-track">
+        <div class="process-intro">
+          <p class="eyebrow">Cum lucrăm</p>
+          <h2>De la analiză la operare.</h2>
+          <p class="lead">Un proces coerent, cu decizii documentate și responsabilitate clară. Fiecare proiect începe cu înțelegerea obiectivelor de business și continuă cu proiectare, implementare, integrare și suport.</p>
+        </div>
+
+        <article class="card step">
+          <div class="step-top"><span class="step-num">01</span><svg class="step-glyph" aria-hidden="true"><use href="#i-search"/></svg></div>
+          <span class="step-tag">Analiză &amp; obiective</span>
+          <h3>Înțelegem obiectivele de business</h3>
+          <p>Inventariem sistemele, procesele, riscurile și dependențele, identificăm blocajele și stabilim ce înseamnă „rezultat” pentru compania ta.</p>
+          <div class="step-out"><span>Ce primești</span><strong>Harta proceselor, a riscurilor și a blocajelor</strong></div>
+        </article>
+
+        <article class="card step">
+          <div class="step-top"><span class="step-num">02</span><svg class="step-glyph" aria-hidden="true"><use href="#i-plan"/></svg></div>
+          <span class="step-tag">Proiectare &amp; arhitectură</span>
+          <h3>Proiectăm o arhitectură unitară</h3>
+          <p>Stabilim ce se schimbă, în ce ordine și cu ce impact asupra activității. Software, infrastructură, securitate și suport, gândite împreună.</p>
+          <div class="step-out"><span>Ce primești</span><strong>Arhitectură documentată și plan de implementare</strong></div>
+        </article>
+
+        <article class="card step">
+          <div class="step-top"><span class="step-num">03</span><svg class="step-glyph" aria-hidden="true"><use href="#i-build"/></svg></div>
+          <span class="step-tag">Implementare &amp; integrare</span>
+          <h3>Punem sistemele să lucreze împreună</h3>
+          <p>Implementăm etapizat, integrăm aplicațiile, migrăm datele controlat și instruim echipa, fără să oprim activitatea.</p>
+          <div class="step-out"><span>Ce primești</span><strong>Sisteme integrate, validate, și o echipă instruită</strong></div>
+        </article>
+
+        <article class="card step">
+          <div class="step-top"><span class="step-num">04</span><svg class="step-glyph" aria-hidden="true"><use href="#i-support"/></svg></div>
+          <span class="step-tag">Operare &amp; suport continuu</span>
+          <h3>Rămânem alături de tine</h3>
+          <p>Monitorizăm, întreținem și dezvoltăm soluția odată cu compania, cu suport local și adaptare rapidă la schimbări operaționale.</p>
+          <div class="step-out"><span>Ce primești</span><strong>Monitorizare, mentenanță și evoluție continuă</strong></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= DE CE MDY ======================= -->
+  <section class="section" id="de-ce">
+    <div class="container why-grid">
+      <div class="why-sticky">
+        <p class="eyebrow">De ce MDY</p>
+        <h2 data-split>Mai mult decât software. Expertiză. Strategie. Rezultate.</h2>
+        <p class="lead">Nu livrăm doar tehnologie, ci o abordare completă a digitalizării, de la consultanță strategică până la implementare, integrare și suport continuu. Un singur partener pentru software, infrastructură, rețea și securitate.</p>
+        <div class="hero-actions"><a class="btn btn-ghost magnetic" href="#contact">Hai să vorbim <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
+      </div>
+      <ul class="why-list" data-reveal-group>
+        <li>
+          <div class="why-glyph"><svg aria-hidden="true"><use href="#i-spark"/></svg></div>
+          <div><h3>Experiență solidă și inovație constantă</h3><p>Tehnologii enterprise verificate în proiecte reale, combinate cu soluții noi acolo unde aduc un avantaj concret.</p></div>
+        </li>
+        <li>
+          <div class="why-glyph"><svg aria-hidden="true"><use href="#i-layers"/></svg></div>
+          <div><h3>Sute de implementări în industrii diverse</h3><p>Producție, logistică, curierat, servicii, sănătate și sector public. Știm unde apar riscurile și cum le evităm din start.</p></div>
+        </li>
+        <li>
+          <div class="why-glyph"><svg aria-hidden="true"><use href="#i-team"/></svg></div>
+          <div><h3>Proiecte livrate de echipe specializate</h3><p>Divizii dedicate pe software, infrastructură, securitate și suport, cu management comun al proiectului.</p></div>
+        </li>
+        <li>
+          <div class="why-glyph"><svg aria-hidden="true"><use href="#i-support"/></svg></div>
+          <div><h3>Suport local și know-how aplicat</h3><p>Oameni care cunosc sistemele tale și răspund repede, nu un call center generic.</p></div>
+        </li>
+        <li>
+          <div class="why-glyph"><svg aria-hidden="true"><use href="#i-refresh"/></svg></div>
+          <div><h3>Adaptare rapidă la schimbări operaționale</h3><p>Când procesele se schimbă, soluția se adaptează odată cu ele, nu devine un obstacol.</p></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ======================= MARQUEE ======================= -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>Software &amp; Aplicații</span><span>Infrastructură, Cloud &amp; Rețea</span><span>Cyber Security</span><span>Managed IT &amp; Suport</span><span>ERP</span><span>CRM</span><span>WMS</span><span>MES</span><span>Business Intelligence</span><span>Windows Server</span><span>Linux</span><span>VMware</span><span>Hyper-V</span><span>Microsoft Azure</span><span>Microsoft 365</span><span>MDY Courier Manager</span><span>MDY Production Hub</span>
+      <span>Software &amp; Aplicații</span><span>Infrastructură, Cloud &amp; Rețea</span><span>Cyber Security</span><span>Managed IT &amp; Suport</span><span>ERP</span><span>CRM</span><span>WMS</span><span>MES</span><span>Business Intelligence</span><span>Windows Server</span><span>Linux</span><span>VMware</span><span>Hyper-V</span><span>Microsoft Azure</span><span>Microsoft 365</span><span>MDY Courier Manager</span><span>MDY Production Hub</span>
+    </div>
+  </div>
+
+  <!-- ======================= BLOG ======================= -->
+  <section class="section" id="blog">
+    <div class="container">
+      <div class="section-head split-head">
+        <div>
+          <p class="eyebrow">Din blogul MDY</p>
+          <h2 data-split>Idei clare pentru tehnologie care lucrează pentru afacere.</h2>
+        </div>
+        <a class="btn btn-ghost magnetic" href="https://mdysolutions.ro/blog/" target="_blank" rel="noopener">Toate articolele <svg aria-hidden="true"><use href="#i-ext"/></svg></a>
+      </div>
+      <div class="blog-grid" data-reveal-group>
+        <a class="card post" href="https://mdysolutions.ro/top-50-atacuri-informatice-explicate/" target="_blank" rel="noopener">
+          <div class="post-meta"><span class="chip">Cyber Security</span><span class="post-date">15.07.2026</span></div>
+          <h3>Top 50 de atacuri informatice explicate pe înțelesul tuturor</h3>
+          <p>De la phishing și ransomware la Golden Ticket, supply chain, injecții și amenințări interne.</p>
+          <span class="link-arrow">Citește articolul <svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a>
+        <a class="card post" href="https://mdysolutions.ro/ghid-microsoft-365-security-setari-companii/" target="_blank" rel="noopener">
+          <div class="post-meta"><span class="chip">Cloud Security</span><span class="post-date">15.07.2026</span></div>
+          <h3>Ghid complet Microsoft 365 Security: peste 30 de setări pe care orice companie ar trebui să le activeze</h3>
+          <p>Un checklist grupat pentru identitate, email, dispozitive, date, colaborare, monitorizare și recuperare.</p>
+          <span class="link-arrow">Citește articolul <svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a>
+        <a class="card post" href="https://mdysolutions.ro/audit-complet-securitate-it-ghid-companii/" target="_blank" rel="noopener">
+          <div class="post-meta"><span class="chip">Audit IT</span><span class="post-date">15.07.2026</span></div>
+          <h3>Cum realizezi un audit complet de securitate IT: ghid practic pentru companii</h3>
+          <p>Un proces practic pentru identificarea vulnerabilităților, prioritizarea riscurilor și construirea unui plan realist de remediere.</p>
+          <span class="link-arrow">Citește articolul <svg aria-hidden="true"><use href="#i-arrow"/></svg></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= CTA ======================= -->
+  <section class="section cta">
+    <div class="container">
+      <div class="cta-box" data-reveal>
+        <p class="eyebrow">Următorul pas</p>
+        <h2>Hai să construim împreună următorul tău proiect IT.</h2>
+        <p class="lead">Fie că ai nevoie de dezvoltare software, modernizarea infrastructurii IT sau o soluție completă de securitate cibernetică, MDY îți oferă expertiza și suportul necesare pentru a transforma cerințele tehnice în soluții sigure, eficiente și scalabile.</p>
+        <div class="cta-actions">
+          <a class="btn btn-signal btn-lg magnetic" href="#contact" data-cursor="Start">Discută cu un specialist <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn-ghost btn-lg magnetic" href="tel:+40747072084">0747 072 084</a>
+        </div>
+        <p class="cta-note">Software · Infrastructură · Securitate · Suport</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= CONTACT ======================= -->
+  <section class="section" id="contact">
+    <div class="container contact-grid">
+      <div>
+        <p class="eyebrow">Contact</p>
+        <h2 data-split>Spune-ne ce ai nevoie.</h2>
+        <p class="lead">Scrie-ne câteva rânduri despre proiect sau sună direct. Un specialist MDY revine cu următorii pași.</p>
+        <ul class="contact-list">
+          <li><svg aria-hidden="true"><use href="#i-phone"/></svg><div><span>Telefon / WhatsApp</span><a href="tel:+40747072084">0747 072 084</a></div></li>
+          <li><svg aria-hidden="true"><use href="#i-mail"/></svg><div><span>Email</span><a href="mailto:office@mdysolutions.ro">office@mdysolutions.ro</a></div></li>
+          <li><svg aria-hidden="true"><use href="#i-support"/></svg><div><span>Suport clienți</span><a href="mailto:office@mdysolutions.ro?subject=Ticket%20suport%20MDY">Deschide un ticket</a></div></li>
+          <li><svg aria-hidden="true"><use href="#i-pin"/></svg><div><span>Locație</span><b>România</b></div></li>
+        </ul>
+      </div>
+      <form class="card form" id="contact-form" data-to="office@mdysolutions.ro" novalidate>
+        <div class="form-grid">
+          <div class="field"><label for="f-name">Nume</label><input id="f-name" name="name" type="text" placeholder="Numele tău" required autocomplete="name"></div>
+          <div class="field"><label for="f-company">Companie</label><input id="f-company" name="company" type="text" placeholder="Firma" autocomplete="organization"></div>
+          <div class="field"><label for="f-email">Email</label><input id="f-email" name="email" type="email" placeholder="nume@firma.ro" required autocomplete="email"></div>
+          <div class="field"><label for="f-phone">Telefon</label><input id="f-phone" name="phone" type="tel" placeholder="07xx xxx xxx" autocomplete="tel"></div>
+          <div class="field full"><label for="f-subject">Ce te interesează</label>
+            <select id="f-subject" name="subject">
+              <option>Software &amp; Aplicații</option>
+              <option>Infrastructură, Cloud &amp; Rețea</option>
+              <option>Cyber Security</option>
+              <option>Managed IT &amp; Suport</option>
+              <option>Demo MDY Courier Manager</option>
+              <option>Demo MDY Production Hub</option>
+              <option>Altceva</option>
+            </select>
+          </div>
+          <div class="field full"><label for="f-message">Mesaj</label><textarea id="f-message" name="message" placeholder="Descrie pe scurt situația sau proiectul..."></textarea></div>
+        </div>
+        <div class="form-foot">
+          <small>Mesajul se deschide în clientul tău de email, precompletat, gata de trimis către office@mdysolutions.ro.</small>
+          <button class="btn btn-primary magnetic" type="submit">Trimite mesajul <svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="#top" aria-label="MDY Solutions">
+          <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M20 3l14 8v18l-14 8-14-8V11l14-8z" stroke="url(#g-mark)" stroke-width="1.6" fill="rgba(25,203,211,0.08)"/>
+            <path d="M12 27V14l8 7 8-7v13" stroke="#e8f3f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="14" r="1.8" fill="#8ff7f7"/><circle cx="28" cy="14" r="1.8" fill="#8ff7f7"/><circle cx="20" cy="21" r="1.8" fill="#8ff7f7"/>
+          </svg>
+          <span>MDY<small>Solutions</small></span>
+        </a>
+        <p>Software · infrastructură · securitate · suport. Digitalizare completă, de la consultanță la suport continuu.</p>
+      </div>
+      <div>
+        <h4>Soluții</h4>
+        <ul>
+          <li><a href="#solutii">Software &amp; Aplicații</a></li>
+          <li><a href="#solutii">Infrastructură, Cloud &amp; Rețea</a></li>
+          <li><a href="#solutii">Cyber Security</a></li>
+          <li><a href="#solutii">Managed IT &amp; Suport</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Companie</h4>
+        <ul>
+          <li><a href="#produse">Produse</a></li>
+          <li><a href="#industrii">Industrii</a></li>
+          <li><a href="#proces">Cum lucrăm</a></li>
+          <li><a href="#de-ce">De ce MDY</a></li>
+          <li><a href="https://mdysolutions.ro/blog/" target="_blank" rel="noopener">Blog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+40747072084">0747 072 084</a></li>
+          <li><a href="mailto:office@mdysolutions.ro">office@mdysolutions.ro</a></li>
+          <li><a href="#contact">Formular de contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year>2026</span> MDY Solutions. Toate drepturile rezervate.</span>
+      <span><a href="#top">Înapoi sus</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+<script src="scene.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

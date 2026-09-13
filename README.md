@@ -4,6 +4,10 @@ Propunere de site nou pentru [mdysolutions.ro](https://mdysolutions.ro): o pagin
 
 Site live (GitHub Pages): https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
+Compară cele două variante:
+- [Varianta originală](https://flaviusvranau1.github.io/mdy-solutions-redesign/original/)
+- [Varianta îmbunătățită](https://flaviusvranau1.github.io/mdy-solutions-redesign/)
+
 Actualizare 13.09.2026: nucleu metalic cu reflexii de studio, siglă în relief,
 inele cu volum și mișcare independentă de rata de cadre. Scena se oprește în
 afara ecranului; cardurile și butoanele au inerție mai fină. Pe telefon, 3D-ul

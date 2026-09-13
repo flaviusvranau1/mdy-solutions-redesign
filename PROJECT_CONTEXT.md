@@ -37,6 +37,8 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 - Added a CSS orb fallback, nonzero demo values in HTML and a readable process
   grid when motion or animation libraries are unavailable. Process step numbers
   stay visible when arriving directly at #proces instead of waiting for entry triggers.
+- Restricted KPI label styling to direct children; nested animated numbers keep
+  their intended large type instead of inheriting the small muted label style.
 
 ## Validation
 

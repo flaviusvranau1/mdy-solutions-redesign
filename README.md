@@ -9,8 +9,9 @@ Compară cele două variante:
 - [Varianta îmbunătățită](https://flaviusvranau1.github.io/mdy-solutions-redesign/)
 
 Actualizare 13.09.2026: nucleu metalic cu reflexii de studio, siglă în relief,
-inele cu volum și mișcare independentă de rata de cadre. Scena se oprește în
-afara ecranului; cardurile și butoanele au inerție mai fină. Pe telefon, 3D-ul
+inele cu volum și mișcare independentă de rata de cadre. Punctele luminoase sunt
+prezente pe toată pagina; nucleul are rotație continuă și orbite independente.
+Nucleul se oprește în afara ecranului; cardurile și butoanele au inerție mai fină. Pe telefon, 3D-ul
 are un spațiu propriu. Versiunea inițială este păstrată în tag-ul
 `before-3d-upgrade-2026-09-13`. Detalii și undo: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 

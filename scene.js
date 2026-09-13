@@ -28,6 +28,8 @@
     totalTime = 0,
     TAU = Math.PI * 2,
     seed = 4821;
+  var viewWidth = innerWidth, viewHeight = innerHeight, stageRect;
+  var scrollPosition = window.scrollY || 0, smoothScroll = scrollPosition;
   function random() {
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
@@ -231,7 +233,7 @@
         new THREE.LineBasicMaterial({
           color: 0x36aeb9,
           transparent: true,
-          opacity: 0.22,
+          opacity: 0.28,
           depthWrite: false,
         }),
       ),
@@ -353,13 +355,13 @@
       var group = new THREE.Group();
       group.rotation.set(tiltX, 0, tiltZ);
       group.add(
-        new THREE.Mesh(new THREE.TorusGeometry(radius, 0.024, 8, 160), metal),
+        new THREE.Mesh(new THREE.TorusGeometry(radius, 0.016, 8, 160), metal),
       );
       var rail = new THREE.Mesh(
         new THREE.TorusGeometry(radius, 0.005, 6, 160),
         luminous,
       );
-      rail.position.z = 0.023;
+      rail.position.z = 0.016;
       group.add(rail);
       var arc = new THREE.Mesh(
         new THREE.TorusGeometry(radius + 0.047, 0.008, 6, 80, Math.PI * 0.62),
@@ -389,21 +391,26 @@
         speed: speed,
         sat: sat,
         tilt: tiltX,
+        roll: tiltZ,
+        arc: arc,
       };
       core.add(group);
       return group;
     }
     var orbits = [
-      makeOrbit(2.03, 1.08, 0.34, 0.4, 0.2, false),
-      makeOrbit(2.43, -0.73, 0.87, 3.7, -0.13, true),
+      makeOrbit(2.03, 1.08, 0.34, 0.4, 0.42, false),
+      makeOrbit(2.43, -0.73, 0.87, 3.7, -0.32, true),
     ];
     function updateOrbits(t) {
       orbits.forEach(function (o) {
         var d = o.userData,
           a = d.phase + t * d.speed;
         d.sat.position.set(Math.cos(a) * d.radius, Math.sin(a) * d.radius, 0);
-        o.rotation.y = Math.sin(t * 0.09 + d.phase) * 0.12;
-        o.rotation.x = d.tilt + Math.sin(t * 0.12) * 0.045;
+        var direction = d.speed > 0 ? 1 : -1;
+        o.rotation.y = t * 0.12 * direction + Math.sin(t * 0.24 + d.phase) * 0.18;
+        o.rotation.x = d.tilt + Math.sin(t * 0.31 + d.phase) * 0.2;
+        o.rotation.z = d.roll + Math.sin(t * 0.2 + d.phase) * 0.12;
+        d.arc.rotation.z = d.phase + t * 0.16 * direction;
       });
     }
     var halo = new THREE.Sprite(
@@ -411,7 +418,7 @@
         map: sprite,
         color: 0x1697a4,
         transparent: true,
-        opacity: 0.12,
+        opacity: 0.18,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       }),
@@ -419,45 +426,89 @@
     halo.position.z = -2;
     halo.scale.setScalar(6.8);
     scene.add(halo);
-    var dustVertices = [];
-    for (i = 0; i < (compact ? 60 : 140); i++)
-      dustVertices.push(
-        (random() - 0.5) * 10,
-        (random() - 0.5) * 8,
-        -4 + random() * 4,
-      );
-    var dust = new THREE.Points(
-      new THREE.BufferGeometry().setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(dustVertices, 3),
-      ),
-      new THREE.PointsMaterial({
-        size: 0.026,
-        map: sprite,
-        color: 0x83c8cf,
-        opacity: 0.4,
-        transparent: true,
-        depthWrite: false,
-      }),
-    );
-    scene.add(dust);
+    // The original full-page star field returns in a single GPU draw call.
+    // Share this renderer with the hero: no second WebGL context or DOM particle loop.
+    var atmosphere = new THREE.Scene();
+    var atmosphereCamera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    atmosphereCamera.position.z = 9;
+    var particleCount = 1600;
+    var particlePositions = new Float32Array(particleCount * 3);
+    var particleSizes = new Float32Array(particleCount);
+    var particlePhases = new Float32Array(particleCount);
+    for (i = 0; i < particleCount; i++) {
+      particlePositions[i * 3] = (random() - 0.5) * 30;
+      particlePositions[i * 3 + 1] = (random() - 0.5) * 18;
+      particlePositions[i * 3 + 2] = -14 + random() * 16;
+      particleSizes[i] = 0.6 + Math.pow(random(), 3) * 3.2;
+      particlePhases[i] = random() * TAU;
+    }
+    var particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    particleGeometry.setAttribute('aSize', new THREE.BufferAttribute(particleSizes, 1));
+    particleGeometry.setAttribute('aPhase', new THREE.BufferAttribute(particlePhases, 1));
+    var particleMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }, uScroll: { value: 0 },
+        uPixelRatio: { value: 1 }, uOpacity: { value: 1 },
+        uColor: { value: new THREE.Color(0x8ff7f7) }
+      },
+      vertexShader: [
+        'attribute float aSize; attribute float aPhase;',
+        'uniform float uTime; uniform float uScroll; uniform float uPixelRatio;',
+        'varying float vAlpha;',
+        'void main() {',
+        '  vec3 p = position;',
+        '  p.x += cos(uTime * 0.12 + aPhase * 1.7) * 0.25;',
+        '  p.y += sin(uTime * 0.16 + aPhase) * 0.25 + uScroll;',
+        '  p.y = mod(p.y + 9.0, 18.0) - 9.0;',
+        '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
+        '  gl_Position = projectionMatrix * mv;',
+        '  gl_PointSize = min(18.0, aSize * uPixelRatio * (34.0 / -mv.z));',
+        '  vAlpha = 0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * 0.9 + aPhase * 6.0));',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'uniform vec3 uColor; uniform float uOpacity; varying float vAlpha;',
+        'void main() {',
+        '  float d = length(gl_PointCoord - 0.5);',
+        '  float a = 1.0 - smoothstep(0.05, 0.5, d); a *= a;',
+        '  gl_FragColor = vec4(uColor, a * vAlpha * 0.55 * uOpacity);',
+        '}'
+      ].join('\n'),
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    atmosphere.add(new THREE.Points(particleGeometry, particleMaterial));
+    renderer.autoClear = false;
+
+    function readStage() {
+      stageRect = stage.getBoundingClientRect();
+      scrollPosition = window.scrollY || 0;
+    }
 
     function layout() {
       var w = stage.clientWidth,
         h = stage.clientHeight;
       if (!w || !h || lost) return;
+      compact = matchMedia('(max-width: 900px)').matches;
+      viewWidth = window.innerWidth;
+      viewHeight = window.innerHeight;
       renderer.setPixelRatio(
         Math.min(
           devicePixelRatio || 1,
-          compact ? 1.4 : 1.8,
-          Math.sqrt(1400000 / (w * h)),
+          compact ? 1.35 : 1.65,
+          Math.sqrt(2400000 / (viewWidth * viewHeight)),
         ) * quality,
       );
-      renderer.setSize(w, h, false);
+      renderer.setSize(viewWidth, viewHeight, false);
+      particleGeometry.setDrawRange(0, compact ? Math.min(850, particleCount) : particleCount);
+      particleMaterial.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+      atmosphereCamera.aspect = viewWidth / viewHeight;
+      atmosphereCamera.updateProjectionMatrix();
       camera.aspect = w / h;
       camera.position.z =
         camera.aspect < 0.95 ? (8.8 * 0.95) / camera.aspect : 8.8;
       camera.updateProjectionMatrix();
+      readStage();
       if (reduced || !visible) render(0);
     }
     function render(dt) {
@@ -467,32 +518,54 @@
       intro = reduced ? 1 : Math.min(1, intro + step * 0.9);
       smooth.x = reduced ? 0 : damp(smooth.x, pointer.x, 4.5, dt);
       smooth.y = reduced ? 0 : damp(smooth.y, pointer.y, 4.5, dt);
+      smoothScroll = reduced ? scrollPosition : damp(smoothScroll, scrollPosition, 8, dt);
       var ease = 1 - Math.pow(1 - intro, 3);
-      core.scale.setScalar(0.88 + ease * 0.12);
-      core.position.y = -0.16 * (1 - ease) + Math.sin(elapsed * 0.42) * 0.045;
-      core.rotation.x = smooth.y * 0.12 + 0.08;
-      core.rotation.y =
-        smooth.x * 0.22 + Math.sin(elapsed * 0.14) * 0.16 - 0.12;
-      inner.rotation.y = elapsed * 0.035;
-      cage.rotation.y = elapsed * 0.055;
-      cage.rotation.z = 0.16;
-      scanMat.uniforms.uTime.value = elapsed;
-      dust.rotation.y = elapsed * 0.008;
-      updatePulses(step);
-      updateOrbits(elapsed);
-      camera.position.x = smooth.x * 0.14;
-      camera.position.y = 0.15 + smooth.y * 0.1;
-      camera.lookAt(0, 0, 0);
-      renderer.render(scene, camera);
+      particleMaterial.uniforms.uTime.value = elapsed;
+      particleMaterial.uniforms.uScroll.value = reduced ? 0 : smoothScroll * 0.0022;
+      particleMaterial.uniforms.uOpacity.value = ease;
+      atmosphereCamera.position.x = smooth.x * 0.35;
+      atmosphereCamera.position.y = smooth.y * 0.22;
+      atmosphereCamera.lookAt(0, 0, 0);
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, viewWidth, viewHeight);
+      renderer.clear();
+      renderer.render(atmosphere, atmosphereCamera);
+
+      // The sculpture keeps its own responsive stage while stars span the whole page.
+      // Below the hero only the single particle draw call remains active.
+      if (stageRect && stageRect.bottom > 0 && stageRect.top < viewHeight) {
+        core.scale.setScalar(0.83 + ease * 0.17);
+        core.position.x = Math.sin(elapsed * 0.24) * 0.055 + smooth.x * 0.1;
+        core.position.y = -0.2 * (1 - ease) + Math.sin(elapsed * 0.58) * 0.1;
+        core.rotation.x = smooth.y * 0.25 + Math.sin(elapsed * 0.33) * 0.12 + 0.08;
+        core.rotation.y = elapsed * 0.11 + smooth.x * 0.45 - 0.12;
+        core.rotation.z = Math.sin(elapsed * 0.22) * 0.075;
+        inner.rotation.y = elapsed * 0.045;
+        cage.rotation.y = elapsed * 0.085;
+        cage.rotation.x = Math.sin(elapsed * 0.26) * 0.1;
+        cage.rotation.z = 0.16;
+        scanMat.uniforms.uTime.value = elapsed;
+        updatePulses(step);
+        updateOrbits(elapsed);
+        camera.position.x = smooth.x * 0.22;
+        camera.position.y = 0.15 + smooth.y * 0.16;
+        camera.lookAt(0, 0, 0);
+        renderer.setViewport(stageRect.left, viewHeight - stageRect.bottom, stageRect.width, stageRect.height);
+        renderer.setScissor(stageRect.left, viewHeight - stageRect.bottom, stageRect.width, stageRect.height);
+        renderer.setScissorTest(true);
+        renderer.clearDepth();
+        renderer.render(scene, camera);
+        renderer.setScissorTest(false);
+      }
     }
     function frame(now) {
       frameId = 0;
-      if (!visible || document.hidden || lost || reduced) return;
+      if (document.hidden || lost || reduced) return;
       var delta = lastTime ? (now - lastTime) / 1000 : 1 / 60;
       lastTime = now;
       render(Math.min(delta, 0.05));
       // Only reduce resolution after sustained slow rendering; no per-frame oscillation.
-      if (intro === 1 && quality === 1 && delta < 0.1) {
+      if (visible && intro === 1 && quality === 1 && delta < 0.1) {
         totalTime += delta;
         samples++;
         if (samples === 120) {
@@ -510,24 +583,29 @@
       cancelAnimationFrame(frameId);
       frameId = 0;
       lastTime = 0;
-      if (!visible || document.hidden || lost) return;
+      if (document.hidden || lost) return;
       if (reduced) render(0);
       else frameId = requestAnimationFrame(frame);
     }
-    stage.addEventListener(
+    window.addEventListener(
       "pointermove",
       function (e) {
         if (reduced || e.pointerType === "touch") return;
-        var r = stage.getBoundingClientRect();
-        pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-        pointer.y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+        pointer.x = (e.clientX / viewWidth) * 2 - 1;
+        pointer.y = -((e.clientY / viewHeight) * 2 - 1);
       },
       { passive: true },
     );
-    stage.addEventListener("pointerleave", function () {
+    document.documentElement.addEventListener("pointerleave", function () {
       pointer.x = pointer.y = 0;
     });
     document.addEventListener("visibilitychange", syncLoop);
+    window.addEventListener('scroll', function () {
+      readStage();
+      if (reduced && !document.hidden) render(0);
+    }, { passive: true });
+    window.addEventListener('resize', layout, { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
     motion.addEventListener("change", function (e) {
       reduced = e.matches;
       intro = 1;
@@ -557,7 +635,6 @@
       }
     });
     if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
-    else window.addEventListener("resize", layout, { passive: true });
     if (window.IntersectionObserver) {
       observer = new IntersectionObserver(
         function (entries) {

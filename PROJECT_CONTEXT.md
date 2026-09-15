@@ -8,13 +8,46 @@ The user requested more realistic 3D and smoother motion, with an easy undo.
 
 ## Stack and publishing
 
-Static HTML/CSS/JavaScript, Three.js 0.180 (ES module via importmap, jsDelivr), GSAP 3.13 + ScrollTrigger + SplitText,
+Static HTML/CSS/JavaScript (hero: hero.js, raw WebGL1 + canvas, no Three.js), GSAP 3.13 + ScrollTrigger + SplitText,
 Lenis 1.1.18; versions are pinned in index.html. No bundler or server API.
 Personal repository: https://github.com/flaviusvranau1/mdy-solutions-redesign
 GitHub Pages publishes the root of main:
 https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
+
+### 2026-09-15 — hero „Sentinel”: server modern + cyber security, generat cu Higgsfield
+
+- Feedback (client + Flavius): the glass command center was "prea basic, nu se vede
+  bine"; the client asked for "un server modern + elemente de cybersecurity, un ecran
+  transparent cu un dashboard de securitate, sau ceva proiecție digitală", and not a
+  Senior Software copy. Higgsfield (MCP) was approved for generation.
+- Process: a 9-agent design workflow (Higgsfield model scout, 3 art directors,
+  integration engineer, 3 judges, synthesizer). All judges picked "Sentinel
+  Projection"; its must-fix list drove the prompts. Generated 8 stills with Nano
+  Banana Pro 2K (16:9, 2752×1536) and chose the dramatic variant: a tall server
+  cabinet inside a cylindrical light field on a projector ring, with three blank
+  floating glass panes. Motion: Veo 3.1 Lite, 8 s, start frame = end frame (seamless
+  loop, locked camera), ByteDance upscale to 2K. Kling 3.0 pro was refused on the free
+  plan. Credits used: about 25.
+- Build (no Three.js any more): `hero.js`
+  - plate (`assets/hero/plate-*.webp`) + loop video (`plate-loop-1920/1280.mp4`,
+    3.7 MB / 1.4 MB) positioned by JS from measured image coordinates; the video's
+    vertical offset is mapped (top −11.6, height 1552.6 image px) so both register.
+  - three 2D canvases (SOC: blocked threats + feed; Infrastructure: uptime + CPU/RAM/
+    network; ERP: orders today) mapped onto the glass panes with CSS `matrix3d` from a
+    homography of the measured corners, so the text stays crisp and in perspective.
+  - raw WebGL1 effects layer in image coordinates: field filaments, travelling ring
+    highlight, amber attack packets that hit the field, hex ripple + ring pulse, then
+    the SOC counter and feed update. Click on the scene launches an attack.
+  - page particles ported to raw WebGL1 on `#scene`.
+  - desktop: plate covers the whole hero, pane placed right of the copy column;
+    ≤900 px: plate fills `.hero-stage` (aspect 0.86) with a tighter crop.
+  - reduced motion: no video, static frame; hidden tab / off-screen hero: loop and
+    video paused. Debug: `mdyHero.info()`, `mdyHero.attack('up'|'low')`.
+- Removed `scene.js`, `dashboard.js`, the Three.js importmap and the old poster.
+- Verified with 2x headless Chrome captures at 1920×1080, 1440×900, 1280×800 and in
+  the Browser pane at 375×812; no console errors.
 
 ### 2026-09-15 — hero replaced: "Centrul de comandă MDY" (ERP + infra + security)
 

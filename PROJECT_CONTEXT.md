@@ -16,6 +16,41 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-15 — MDY feedback: 3D ecosystem hero, client photos, client fonts
+
+- Client (MDY) feedback relayed by the user: replace the globe with their hexagon
+  ecosystem graphic (Soluții Software · Arhitectură & Integrare · Date & Tehnologie),
+  keep our cards and background, put their photos into the cards at smaller sizes,
+  use their text font. The user asked for the hexagon "in a 3D way, powerful, unexpected".
+- Source: the client's WordPress theme archive "MDY Web .zip" (theme v111). Fonts
+  confirmed in its functions.php: Barlow Condensed 500–800 + Inter 400–700.
+- Hero: the hexagon is rebuilt as real geometry, not an image. A triangular Möbius
+  ribbon with three rolled 60° folds is generated from material coordinates by
+  successive reflections across the fold lines (C3 symmetric; closes exactly with
+  L = 6√3, verified numerically). Custom shader: per-panel gradients, neon edges,
+  data pulses travelling along the edges, glossy sweep, dithered dissolve.
+  Each panel has canvas-drawn text in the client fonts and a procedural 3D icon
+  (monitor + gear + cloud, server stack + cloud + nodes, database + shield + chart).
+  The MDY logo is cut from the client's transparent PNG (flood fill removes the
+  ribbon) into emblem and wordmark layers at different depths.
+- Motion: light-front intro draws the ribbon, then logo, text and icons; continuous
+  idle sway and float (text stays readable); pointer tilt; hovered panel lifts and
+  shows a cursor label; click scrolls to Soluții; on scroll the ribbon tilts back
+  and the panels separate. Full-page particles kept (1,600 / 850 compact).
+- Ported the 2026-09-13 lifecycle work into the new scene: pixel-ratio budget,
+  adaptive quality after sustained slow frames, loop stops when the document is
+  hidden, context loss/restore, reduced-motion static render.
+- Cards: solution, product and industry cards show the client photos (resized to
+  760 px WebP, 14–49 KB, lazy-loaded) with a parallax window driven by the smoothed tilt.
+  Real MDY logo in nav and footer; favicon from the emblem.
+- Kept the 2026-09-13 main.js improvements unchanged and added a small `window.mdy`
+  API (scrollTo, cursor label) used by the scene. The globe caption and legend were
+  removed with the globe. `/original/` untouched.
+- Validation: `node --check`, `git diff --check`; desktop 1440×900 and 375×812 in the
+  in-app browser (no horizontal overflow, WebGL on, compact panel text on mobile,
+  12/12 card photos load). In-app screenshots below the fold were unreliable while
+  the pane was not painting; those sections were checked by forcing reveal states.
+
 ### 2026-09-13 — restore atmosphere and expressive motion
 
 - User feedback: removing the full-page glowing dots lost an important part of

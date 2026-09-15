@@ -8,13 +8,37 @@ The user requested more realistic 3D and smoother motion, with an easy undo.
 
 ## Stack and publishing
 
-Static HTML/CSS/JavaScript, Three.js r128, GSAP 3.13 + ScrollTrigger + SplitText,
+Static HTML/CSS/JavaScript, Three.js 0.180 (ES module via importmap, jsDelivr), GSAP 3.13 + ScrollTrigger + SplitText,
 Lenis 1.1.18; versions are pinned in index.html. No bundler or server API.
 Personal repository: https://github.com/flaviusvranau1/mdy-solutions-redesign
 GitHub Pages publishes the root of main:
 https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
+
+### 2026-09-15 — hero replaced: "Centrul de comandă MDY" (ERP + infra + security)
+
+- Client and Flavius felt the 3D hexagon did not look natural and pointed to
+  seniorsoftware.ro (pre-rendered laptop/phone MP4) as the bar to beat; they also
+  wanted servers, infrastructure and cyber security in the story. The hexagon is gone.
+- New hero: a floating glass display showing a live, animated MDY dashboard
+  (`dashboard.js`, canvas texture, 7 modules: ERP, Producție, Curierat, Depozit,
+  BI, Infrastructură, Cyber Security, crossfades between them), six glass module
+  plates around it with procedural 3D icons (server rack, shield with threat nodes,
+  gears, parcel, bars, ERP cubes), light streams from each plate into the screen
+  edge, a faint floor reflection. Hover a plate switches the screen to that module;
+  click scrolls to #solutii and opens the matching service card; the screen
+  auto-cycles when idle (the courier plate alternates Curierat/Depozit).
+- Rendering moved to Three.js 0.180 ES modules (importmap to jsDelivr):
+  RoomEnvironment PMREM lighting, ACES tone mapping, warm key + cool rim lights,
+  MeshPhysicalMaterial with clearcoat/sheen, no neon edge lines. main.js is untouched.
+- Fallback: inline check adds `no-webgl` without WebGL2/modules (or if the scene
+  has not started after 8 s) and shows `assets/img/hero-poster.webp`, a 2x capture
+  of the real scene. Debug: `mdyScene.setModule(id)`, `mdyScene.capture(pr)`.
+- Hero copy now ties ERP, infrastructure and security together (eyebrow, lead,
+  CTAs "Explorează modulele" / "Programează un demo", three proof points).
+- Verified locally at 1440×900 and 375×812: no console errors, labels fit,
+  hover switches modules, dashboard frame cost about 2 ms.
 
 ### 2026-09-15 — feedback: scrolling should feel "mega smooth"
 

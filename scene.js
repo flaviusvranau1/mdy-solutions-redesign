@@ -1,370 +1,201 @@
-/* MDY Solutions — scenă WebGL (Three.js r128, global THREE)
-   Eroul: ecosistemul MDY (Soluții Software · Arhitectură & Integrare · Date & Tehnologie)
-   construit în 3D real ca panglică triunghiulară pliată de trei ori — o bandă Möbius cu
-   plieri rulate, conținut pe fiecare panou, iconițe 3D și logo-ul MDY în centru.
-   Plus câmpul de particule pe toată pagina. Fără WebGL: imaginea originală a clientului. */
-(function () {
-  'use strict';
-  var canvas = document.getElementById('scene');
+/* MDY Solutions — scenă WebGL (Three.js 0.180, module ES)
+   Eroul: „Centrul de comandă MDY” — un ecran de sticlă plutitor cu dashboard-ul ERP viu,
+   șase module (ERP, Producție, Curierat & Depozit, BI & Analytics, Infrastructură & Cloud,
+   Cyber Security) ca plăci de sticlă în jurul lui, fluxuri de lumină care converg spre ecran
+   și o reflexie pe suprafața întunecată de dedesubt. Iluminare fizică (mediu de studio, cheie
+   caldă + contur rece, ACES), fără linii neon. Fără WebGL2: posterul static din pagină. */
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+(function main() {
+  const canvas = document.getElementById('scene');
   if (!canvas) return;
-  var root = document.documentElement;
-  var stage = document.querySelector('.hero-stage');
-  function noGL() { root.classList.add('no-webgl'); }
-  if (!window.THREE) { noGL(); return; }
+  const root = document.documentElement;
+  const stage = document.querySelector('.hero-stage');
+  const noGL = () => { root.classList.remove('has-webgl'); root.classList.add('no-webgl'); };
 
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var coarse = window.matchMedia('(pointer: coarse)').matches;
+  let reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const lowTier = coarse || (navigator.hardwareConcurrency || 8) <= 4;
 
-  var renderer;
+  let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   } catch (e) { noGL(); return; }
-  var quality = 1;                 /* scade la 0.8 doar după randare lentă susținută */
+  let quality = 1;                 /* scade la 0.8 doar după randare lentă susținută */
+  const compactVp = () => window.innerWidth <= 900;
   function applyPixelRatio() {
-    var compactVp = window.innerWidth <= 900;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compactVp ? 2 : 1.5,
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compactVp() ? 2 : 1.5,
       Math.sqrt(2400000 / Math.max(1, window.innerWidth * window.innerHeight))) * quality);
   }
   applyPixelRatio();
   renderer.setClearColor(0x000000, 0);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  root.classList.remove('no-webgl');
   root.classList.add('has-webgl');
 
-  var FOV = 38, CAM_Z = 9;
-  var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
+  const FOV = 32, CAM_Z = 9.5;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
   camera.position.set(0, 0, CAM_Z);
 
   /* ---------- utilitare ---------- */
-  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
-  function smooth01(e0, e1, x) { var t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
-  function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
-  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
-  function easeBack(t) { var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
-  function roundRectPath(g, x, y, w, h, r) {
-    g.beginPath(); g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
-    g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h); g.lineTo(x + r, y + h);
-    g.quadraticCurveTo(x, y + h, x, y + h - r); g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
-  }
+  const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smooth01 = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  const easeBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
   function makeSprite() {
-    var c = document.createElement('canvas'); c.width = c.height = 64;
-    var g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
     grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.3, 'rgba(255,255,255,0.65)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
-    return new THREE.CanvasTexture(c);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
   }
-  var sprite = makeSprite();
-  var maxAniso = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1;
+  const sprite = makeSprite();
+  const maxAniso = renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1;
+  function glow(color, opacity, sx, sy, x, y, z) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sprite, color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    s.scale.set(sx, sy, 1); s.position.set(x, y, z); s.userData.base = opacity; return s;
+  }
 
   /* =====================================================================
-     1. Câmp de particule ambientale (toată pagina)
+     1. Lumină: mediu de studio (PMREM) + cheie caldă, contur rece, umplere albastră
      ===================================================================== */
-  var N = 1600, pPos = new Float32Array(N * 3), pSize = new Float32Array(N), pPhase = new Float32Array(N);
-  for (var i = 0; i < N; i++) {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+  scene.environmentIntensity = 0.7;
+  const keyLight = new THREE.DirectionalLight(0xffe9d6, 2.6); keyLight.position.set(-5, 5, 5); scene.add(keyLight);
+  const rimLight = new THREE.DirectionalLight(0xb8f1f4, 2.6); rimLight.position.set(5, 3, -6); scene.add(rimLight);
+  const fillLight = new THREE.DirectionalLight(0x2f5bd8, 0.6); fillLight.position.set(3, -4, 5); scene.add(fillLight);
+
+  /* =====================================================================
+     2. Câmp de particule ambientale (toată pagina)
+     ===================================================================== */
+  const N = lowTier ? 700 : 1400;
+  const pPos = new Float32Array(N * 3), pSize = new Float32Array(N), pPhase = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
     pPos[i * 3] = (Math.random() - 0.5) * 30;
     pPos[i * 3 + 1] = (Math.random() - 0.5) * 18;
     pPos[i * 3 + 2] = -14 + Math.random() * 16;
     pSize[i] = 0.6 + Math.pow(Math.random(), 3) * 3.2;
     pPhase[i] = Math.random() * 6.283;
   }
-  var pGeo = new THREE.BufferGeometry();
+  const pGeo = new THREE.BufferGeometry();
   pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
   pGeo.setAttribute('aSize', new THREE.BufferAttribute(pSize, 1));
   pGeo.setAttribute('aPhase', new THREE.BufferAttribute(pPhase, 1));
-  var pMat = new THREE.ShaderMaterial({
+  const pMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uScroll: { value: 0 }, uPixelRatio: { value: renderer.getPixelRatio() }, uColor: { value: new THREE.Color('#8ff7f7') }, uOpacity: { value: 0 } },
-    vertexShader: [
-      'attribute float aSize; attribute float aPhase;',
-      'uniform float uTime; uniform float uScroll; uniform float uPixelRatio;',
-      'varying float vAlpha;',
-      'void main(){',
-      '  vec3 p = position;',
-      '  p.x += cos(uTime * 0.12 + aPhase * 1.7) * 0.25;',
-      '  p.y += sin(uTime * 0.16 + aPhase) * 0.25 + uScroll;',
-      '  p.y = mod(p.y + 9.0, 18.0) - 9.0;',
-      '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
-      '  gl_Position = projectionMatrix * mv;',
-      '  gl_PointSize = aSize * uPixelRatio * (34.0 / -mv.z);',
-      '  vAlpha = 0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * 0.9 + aPhase * 6.0));',
-      '}'
-    ].join('\n'),
-    fragmentShader: [
-      'uniform vec3 uColor; uniform float uOpacity; varying float vAlpha;',
-      'void main(){',
-      '  float d = length(gl_PointCoord - 0.5);',
-      '  float a = smoothstep(0.5, 0.05, d); a *= a;',
-      '  gl_FragColor = vec4(uColor, a * vAlpha * 0.5 * uOpacity);',
-      '}'
-    ].join('\n'),
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+    vertexShader: `
+      attribute float aSize; attribute float aPhase;
+      uniform float uTime; uniform float uScroll; uniform float uPixelRatio;
+      varying float vAlpha;
+      void main(){
+        vec3 p = position;
+        p.x += cos(uTime * 0.12 + aPhase * 1.7) * 0.25;
+        p.y += sin(uTime * 0.16 + aPhase) * 0.25 + uScroll;
+        p.y = mod(p.y + 9.0, 18.0) - 9.0;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = aSize * uPixelRatio * (34.0 / -mv.z);
+        vAlpha = 0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * 0.9 + aPhase * 6.0));
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor; uniform float uOpacity; varying float vAlpha;
+      void main(){
+        float d = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.05, d); a *= a;
+        float k = a * vAlpha * 0.5 * uOpacity;
+        gl_FragColor = vec4(uColor * k, k);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false
   });
-  var particles = new THREE.Points(pGeo, pMat);
+  const particles = new THREE.Points(pGeo, pMat);
   particles.renderOrder = -1;
   scene.add(particles);
 
   /* =====================================================================
-     2. Panglica: bandă Möbius triunghiulară, 3 plieri rulate la 60°
-        Coordonate de material (a lungime, b lățime) -> spațiu 3D prin
-        reflexii succesive față de liniile de pliere (simetrie C3).
+     3. Ecranul: dashboard-ul ERP desenat în canvas (dashboard.js) pe o placă de sticlă
      ===================================================================== */
-  var RIB_W = 1, RHO = 0.1, SIGMA = -1;          /* lățime bandă, raza plierii, plierea merge în spate */
-  var RB = (function () {
-    var PI = Math.PI;
-    function rot(p, t) { var c = Math.cos(t), s = Math.sin(t); return { x: c * p.x - s * p.y, y: s * p.x + c * p.y }; }
-    function refl(d, c) { var k = 2 * (d.x * c.x + d.y * c.y); return { x: k * c.x - d.x, y: k * c.y - d.y }; }
-    var yc = 2 - PI * RHO / 2;
-    var creases = [0, 1, 2].map(function (k) {
-      var t = -k * 2 * PI / 3;
-      return { C: rot({ x: 0, y: yc }, t), c: rot({ x: 1, y: 0 }, t), n: rot({ x: 0, y: 1 }, t) };
-    });
-    var A1 = { x: 0.5, y: Math.sqrt(3) / 2 }, B1 = { x: -A1.y, y: A1.x };
-    var cfg = [{ O: { x: B1.x, y: B1.y }, A: A1, B: B1, z0: 0, F: 1 }];
-    for (var k = 0; k < 3; k++) {
-      var cf = cfg[k], cr = creases[k];
-      var ox = cf.O.x - cr.C.x, oy = cf.O.y - cr.C.y;
-      var tc = ox * cr.c.x + oy * cr.c.y, dn = ox * cr.n.x + oy * cr.n.y - PI * RHO;
-      cfg.push({
-        O: { x: cr.C.x + cr.c.x * tc - cr.n.x * dn, y: cr.C.y + cr.c.y * tc - cr.n.y * dn },
-        A: refl(cf.A, cr.c), B: refl(cf.B, cr.c), z0: cf.z0 + 2 * SIGMA * RHO, F: -cf.F
-      });
-    }
-    var last = cfg[3];
-    var L = (cfg[0].O.x - last.O.x) * last.A.x + (cfg[0].O.y - last.O.y) * last.A.y;
-    var slope = -last.z0 / L;
-    function flat(cf, k, px, py, a, o) {
-      o.x = px; o.y = py; o.z = cf.z0 + slope * a;
-      o.nx = -slope * cf.B.y; o.ny = slope * cf.B.x; o.nz = cf.F;
-      o.seg = k;
-      return o;
-    }
-    function map(a, b, o) {
-      var cf = cfg[0];
-      for (var k = 0; k < 3; k++) {
-        var px = cf.O.x + a * cf.A.x + b * cf.B.x, py = cf.O.y + a * cf.A.y + b * cf.B.y;
-        var cr = creases[k], dx = px - cr.C.x, dy = py - cr.C.y;
-        var d = dx * cr.n.x + dy * cr.n.y;
-        if (d <= 0) return flat(cf, k, px, py, a, o);
-        if (d < PI * RHO) {
-          var t = dx * cr.c.x + dy * cr.c.y, ph = d / RHO, sp = Math.sin(ph), cp = Math.cos(ph);
-          o.x = cr.C.x + cr.c.x * t + cr.n.x * RHO * sp;
-          o.y = cr.C.y + cr.c.y * t + cr.n.y * RHO * sp;
-          o.z = cf.z0 + slope * a + SIGMA * RHO * (1 - cp);
-          o.nx = cf.F * (-SIGMA * cr.n.x * sp); o.ny = cf.F * (-SIGMA * cr.n.y * sp); o.nz = cf.F * cp;
-          o.seg = k + ph / PI;
-          return o;
-        }
-        cf = cfg[k + 1];
-      }
-      return flat(cf, 3, cf.O.x + a * cf.A.x + b * cf.B.x, cf.O.y + a * cf.A.y + b * cf.B.y, a, o);
-    }
-    function zOn(k, x, y) {
-      var cf = cfg[k], a = (x - cf.O.x) * cf.A.x + (y - cf.O.y) * cf.A.y;
-      return cf.z0 + slope * a;
-    }
-    return { L: L, map: map, zOn: zOn };
+  const hero = new THREE.Group();          /* urmărește .hero-stage */
+  const tilt = new THREE.Group();          /* mouse + respirație + coregrafie la scroll */
+  const content = new THREE.Group();       /* compoziția, centrată */
+  scene.add(hero); hero.add(tilt); tilt.add(content);
+  content.position.y = 0.14;
+
+  const SLAB_W = 3.2, SLAB_H = 2.0, SLAB_D = 0.08, FLOOR_Y = -1.62;
+  const DASH_W = compactVp() ? 1152 : 1536, DASH_H = Math.round(DASH_W * 0.625);
+  let dash = null;
+  if (typeof window.createDashboard === 'function') {
+    try { dash = window.createDashboard({ width: DASH_W, height: DASH_H, module: 'erp', fps: lowTier ? 20 : 30 }); } catch (e) { dash = null; }
+  }
+  const screenCanvas = dash ? dash.canvas : (function () {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 640;
+    const g = c.getContext('2d'), grd = g.createLinearGradient(0, 0, 1024, 640);
+    grd.addColorStop(0, '#0a1f38'); grd.addColorStop(1, '#05111d'); g.fillStyle = grd; g.fillRect(0, 0, 1024, 640);
+    g.fillStyle = '#8ff7f7'; g.font = '700 120px "Barlow Condensed", Arial'; g.fillText('MDY', 80, 200);
+    return c;
   })();
+  const screenTex = new THREE.CanvasTexture(screenCanvas);
+  screenTex.colorSpace = THREE.SRGBColorSpace;
+  screenTex.anisotropy = Math.min(8, maxAniso);
+  screenTex.generateMipmaps = true;
+  screenTex.minFilter = THREE.LinearMipmapLinearFilter;
+  screenTex.magFilter = THREE.LinearFilter;
 
-  function ribbonGeometry(NA, NB) {
-    var o = {}, n = (NA + 1) * (NB + 1);
-    var pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2), seg = new Float32Array(n);
-    var v = 0;
-    for (var i = 0; i <= NA; i++) {
-      var a = RB.L * i / NA;
-      for (var j = 0; j <= NB; j++) {
-        RB.map(a, -RIB_W / 2 + RIB_W * j / NB, o);
-        pos[v * 3] = o.x; pos[v * 3 + 1] = o.y; pos[v * 3 + 2] = o.z;
-        nor[v * 3] = o.nx; nor[v * 3 + 1] = o.ny; nor[v * 3 + 2] = o.nz;
-        uv[v * 2] = i / NA; uv[v * 2 + 1] = j / NB; seg[v] = o.seg; v++;
-      }
-    }
-    var idx = [];
-    for (i = 0; i < NA; i++) for (j = 0; j < NB; j++) {
-      var p0 = i * (NB + 1) + j, p1 = p0 + NB + 1;
-      idx.push(p0, p1, p0 + 1, p0 + 1, p1, p1 + 1);
-    }
-    var g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    g.setAttribute('aSeg', new THREE.BufferAttribute(seg, 1));
-    g.setIndex(idx);
-    return g;
-  }
-  function haloGeometry(NA, gw) {
-    var o = {}, pos = [], glow = [], along = [], idx = [];
-    [-1, 1].forEach(function (side) {
-      var base = pos.length / 3;
-      for (var i = 0; i <= NA; i++) {
-        var a = RB.L * i / NA;
-        for (var r = 0; r < 2; r++) {
-          RB.map(a, side * (RIB_W / 2 + r * gw), o);
-          pos.push(o.x, o.y, o.z); glow.push(1 - r); along.push(i / NA);
-        }
-      }
-      for (i = 0; i < NA; i++) {
-        var q0 = base + i * 2, q1 = q0 + 2;
-        idx.push(q0, q1, q0 + 1, q0 + 1, q1, q1 + 1);
-      }
-    });
-    var g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('aGlow', new THREE.Float32BufferAttribute(glow, 1));
-    g.setAttribute('aAlong', new THREE.Float32BufferAttribute(along, 1));
-    g.setIndex(idx);
-    return g;
-  }
-
-  var ribbonMat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 }, uPulseT: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 1 },
-      uHover: { value: new THREE.Vector3() }, uDots: { value: Math.floor(RB.L * 16) }
-    },
-    vertexShader: [
-      'attribute float aSeg;',
-      'varying vec2 vUv; varying float vSeg; varying vec3 vN; varying vec3 vViewPos; varying vec3 vLocal;',
-      'void main(){',
-      '  vUv = uv; vSeg = aSeg; vLocal = position;',
-      '  vN = normalize(normalMatrix * normal);',
-      '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
-      '  vViewPos = mv.xyz;',
-      '  gl_Position = projectionMatrix * mv;',
-      '}'
-    ].join('\n'),
-    fragmentShader: [
-      'uniform float uTime; uniform float uPulseT; uniform float uReveal; uniform float uFade; uniform vec3 uHover; uniform float uDots;',
-      'varying vec2 vUv; varying float vSeg; varying vec3 vN; varying vec3 vViewPos; varying vec3 vLocal;',
-      'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }',
-      /* 0 = Soluții Software (cyan), 1 = Arhitectură & Integrare (indigo), 2 = Date & Tehnologie (albastru regal) */
-      'vec3 panelColor(float k, vec2 p){',
-      '  if (k < 0.5) {',
-      '    float g = clamp(0.34 + 0.34 * dot(p, vec2(0.5, 0.866)) + 0.1 * (dot(p, vec2(-0.866, 0.5)) - 1.0), 0.0, 1.0);',
-      '    return mix(vec3(0.03, 0.30, 0.74), vec3(0.15, 0.86, 0.93), g);',
-      '  } else if (k < 1.5) {',
-      '    float g = clamp(0.42 + 0.34 * (dot(p, vec2(0.866, 0.5)) - 1.0) - 0.16 * dot(p, vec2(0.5, -0.866)), 0.0, 1.0);',
-      '    return mix(vec3(0.03, 0.05, 0.19), vec3(0.22, 0.24, 0.62), g);',
-      '  }',
-      '  float g = clamp(0.55 - 0.22 * p.x + 0.25 * (p.y + 1.0), 0.0, 1.0);',
-      '  return mix(vec3(0.03, 0.11, 0.42), vec3(0.14, 0.47, 0.97), g);',
-      '}',
-      'void main(){',
-      '  if (vUv.x > uReveal) discard;',
-      '  if (uFade < 0.999 && hash(floor(gl_FragCoord.xy)) > uFade) discard;',
-      '  vec3 N = normalize(vN); if (!gl_FrontFacing) N = -N;',
-      '  vec3 V = normalize(-vViewPos);',
-      '  float ndv = clamp(dot(N, V), 0.0, 1.0);',
-      '  float fres = pow(1.0 - ndv, 2.2);',
-      '  float k0 = floor(vSeg + 0.0001);',
-      '  float f = smoothstep(0.1, 0.9, vSeg - k0);',
-      '  vec3 base = mix(panelColor(mod(k0, 3.0), vLocal.xy), panelColor(mod(k0 + 1.0, 3.0), vLocal.xy), f);',
-      '  float sm = mod(vSeg, 3.0);',
-      '  float hov = dot(uHover, vec3(max(0.0, 1.0 - min(sm, 3.0 - sm)), max(0.0, 1.0 - abs(sm - 1.0)), max(0.0, 1.0 - abs(sm - 2.0))));',
-      '  vec3 Lk = normalize(vec3(-0.45, 0.65, 0.62));',
-      '  float diff = 0.64 + 0.36 * max(dot(N, Lk), 0.0);',
-      '  vec3 H = normalize(Lk + V);',
-      '  float spec = pow(max(dot(N, H), 0.0), 42.0);',
-      '  vec3 col = base * diff * (1.0 + hov * 0.28);',
-      '  col += vec3(0.7, 0.95, 1.0) * spec * 0.45;',
-      '  col += vec3(0.3, 0.88, 1.0) * fres * 0.55;',
-      '  float sweep = mod(uTime * 0.55, 13.0) - 4.5;',
-      '  float sw = exp(-pow((dot(vLocal.xy, vec2(0.75, 0.66)) - sweep) * 1.5, 2.0));',
-      '  col += vec3(0.5, 0.92, 1.0) * sw * 0.14;',
-      '  vec2 gp = vec2(vUv.x * uDots, abs(vUv.y - 0.5) * 16.0);',
-      '  float dotg = 1.0 - smoothstep(0.07, 0.15, length(fract(gp) - 0.5));',
-      '  col += vec3(0.6, 0.95, 1.0) * dotg * 0.03;',
-      '  float e = min(vUv.y, 1.0 - vUv.y);',
-      '  float aa = fwidth(vUv.y);',
-      '  float line = 1.0 - smoothstep(0.005, 0.005 + aa * 1.6, e);',
-      '  float inner = exp(-e * 30.0);',
-      '  float ph = fract(vUv.x * 3.0 - uPulseT * 0.085);',
-      '  float pulse = smoothstep(0.0, 0.012, ph) * (1.0 - smoothstep(0.012, 0.08, ph));',
-      '  vec3 glowC = vec3(0.56, 0.97, 0.97);',
-      '  col += glowC * inner * (0.26 + 1.35 * pulse + 0.4 * hov);',
-      '  col = mix(col, vec3(0.82, 1.0, 1.0), line * 0.85);',
-      '  float head = (1.0 - smoothstep(0.0, 0.03, uReveal - vUv.x)) * (1.0 - step(0.9995, uReveal));',
-      '  col += glowC * head * 2.4;',
-      '  gl_FragColor = vec4(col, 1.0);',
-      '}'
-    ].join('\n'),
-    side: THREE.DoubleSide,
-    extensions: { derivatives: true }
-  });
-  var haloMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uPulseT: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 1 } },
-    vertexShader: [
-      'attribute float aGlow; attribute float aAlong;',
-      'varying float vGlow; varying float vAlong;',
-      'void main(){ vGlow = aGlow; vAlong = aAlong; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }'
-    ].join('\n'),
-    fragmentShader: [
-      'uniform float uTime; uniform float uPulseT; uniform float uReveal; uniform float uFade;',
-      'varying float vGlow; varying float vAlong;',
-      'void main(){',
-      '  if (vAlong > uReveal) discard;',
-      '  float ph = fract(vAlong * 3.0 - uPulseT * 0.085);',
-      '  float pulse = smoothstep(0.0, 0.012, ph) * (1.0 - smoothstep(0.012, 0.08, ph));',
-      '  float g = vGlow * vGlow;',
-      '  gl_FragColor = vec4(vec3(0.42, 0.93, 1.0), g * (0.5 + pulse * 0.9) * uFade);',
-      '}'
-    ].join('\n'),
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
-  });
-
-  /* ---------- ierarhie: root (poziționat pe .hero-stage) > tilt > content ---------- */
-  var ribbonRoot = new THREE.Group();
-  var spinGroup = new THREE.Group();   /* rotirea la click, în jurul unei axe din planul ecranului */
-  var tilt = new THREE.Group();
-  var content = new THREE.Group();
-  ribbonRoot.add(spinGroup); spinGroup.add(tilt); tilt.add(content);
-  content.position.y = -0.2;
-  scene.add(ribbonRoot);
-  var ribbonMesh = new THREE.Mesh(ribbonGeometry(coarse ? 640 : 900, coarse ? 18 : 24), ribbonMat);
-  var haloMesh = new THREE.Mesh(haloGeometry(coarse ? 640 : 900, 0.075), haloMat);
-  haloMesh.renderOrder = 2;
-  content.add(ribbonMesh); content.add(haloMesh);
-
-  var backGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sprite, color: 0x1a6fd6, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-  backGlow.scale.set(6.4, 6.4, 1); backGlow.position.set(0, 0.2, -0.9);
-  content.add(backGlow);
+  const slab = new THREE.Group();
+  slab.rotation.set(0.03, -0.14, 0);
+  content.add(slab);
+  const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0x0b1626, metalness: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.14, envMapIntensity: 1.1, transparent: true });
+  const bodyGeo = new RoundedBoxGeometry(SLAB_W, SLAB_H, SLAB_D, 4, 0.05);
+  const body = new THREE.Mesh(bodyGeo, bodyMat); slab.add(body);
+  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false });
+  screenMat.color.setScalar(0);
+  const screenGeo = new THREE.PlaneGeometry(SLAB_W - 0.12, SLAB_H - 0.12);
+  const screen = new THREE.Mesh(screenGeo, screenMat); screen.position.z = SLAB_D / 2 + 0.002; slab.add(screen);
+  /* sticla de deasupra ecranului: doar reflexiile mediului, adunate peste imagine */
+  const coverMat = new THREE.MeshPhysicalMaterial({ color: 0x000000, metalness: 0, roughness: 0.07, clearcoat: 1, clearcoatRoughness: 0.07, envMapIntensity: 2.4, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  const cover = new THREE.Mesh(new THREE.PlaneGeometry(SLAB_W - 0.08, SLAB_H - 0.08), coverMat); cover.position.z = SLAB_D / 2 + 0.006; slab.add(cover);
+  /* lumina ecranului se răsfrânge în spate și pe „podea”; un strop cald jos-dreapta */
+  const backGlow = glow(0x1a6fd6, 0.3, 6.0, 4.2, 0, 0, -0.6); content.add(backGlow);
+  const pool = glow(0x19cbd3, 0.16, 5.4, 0.9, 0.1, FLOOR_Y - 0.05, 0.3); content.add(pool);
+  const warm = glow(0xffb454, 0.07, 3.2, 2.4, 1.9, -1.1, -0.9); content.add(warm);
 
   /* =====================================================================
-     3. Iconițe 3D (materiale lucioase cu mediu de lumină propriu)
+     4. Modulele: plăci de sticlă cu text (canvas) și iconițe 3D procedurale
      ===================================================================== */
-  scene.add(new THREE.AmbientLight(0x6fa8ff, 0.35));
-  var keyLight = new THREE.DirectionalLight(0xffffff, 1.05); keyLight.position.set(-3, 5, 8); scene.add(keyLight);
-  var rimLight = new THREE.DirectionalLight(0x19cbd3, 0.9); rimLight.position.set(6, -2, 4); scene.add(rimLight);
-
-  var envMap = (function () {
-    var env = new THREE.Scene();
-    env.background = new THREE.Color(0x040a16);
-    var geo = new THREE.PlaneGeometry(1, 1);
-    function former(hex, k, w, h, x, y, z) {
-      var m = new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(k), side: THREE.DoubleSide });
-      var p = new THREE.Mesh(geo, m); p.scale.set(w, h, 1); p.position.set(x, y, z); p.lookAt(0, 0, 0); env.add(p);
-    }
-    former('#ffffff', 3.2, 10, 3, 0, 7, 2);
-    former('#8ff7f7', 2.4, 1.6, 9, -7, 0, 3);
-    former('#3a6bff', 2.2, 1.4, 8, 7, -1, 2);
-    former('#19cbd3', 1.3, 8, 5, 0, -2, -8);
-    var pm = new THREE.PMREMGenerator(renderer);
-    var tex = pm.fromScene(env, 0.04).texture;
-    pm.dispose();
-    return tex;
-  })();
-
-  var iconMats = [], gFade = 1;
-  function std(opts) { opts.envMap = envMap; opts.transparent = true; var m = new THREE.MeshStandardMaterial(opts); iconMats.push(m); return m; }
-  var M = {
-    body: std({ color: 0x1d5fe0, metalness: 0.55, roughness: 0.24, envMapIntensity: 1.25, emissive: 0x0b2f7a, emissiveIntensity: 0.45 }),
-    dark: std({ color: 0x0c1f44, metalness: 0.6, roughness: 0.3, envMapIntensity: 1.1, emissive: 0x06142e, emissiveIntensity: 0.5 }),
-    cyan: std({ color: 0x19cbd3, metalness: 0.35, roughness: 0.2, envMapIntensity: 1.2, emissive: 0x19cbd3, emissiveIntensity: 0.5 }),
-    glass: std({ color: 0x7fe9f2, metalness: 0.1, roughness: 0.08, envMapIntensity: 1.4, emissive: 0x2adce5, emissiveIntensity: 0.35, opacity: 0.92 })
+  const FAM_T = '"Barlow Condensed", "Arial Narrow", Arial, sans-serif';
+  const FAM_B = 'Inter, "Segoe UI", Arial, sans-serif';
+  const CARD_W = 1.0, CARD_H = 0.42, CARD_D = 0.04, LBL_W = 640, LBL_H = 269;
+  const CARDS = [
+    { id: 'erp', label: 'ERP operațional', sub: 'Comenzi · Facturi · Stoc', pos: [-2.0, 0.92, 0.5], yaw: 0.26, icon: 'erp', svc: 'software' },
+    { id: 'productie', label: 'Producție & MES', sub: 'Planificare · OEE · Trasabilitate', pos: [-2.12, -0.12, 0.72], yaw: 0.26, icon: 'gear', svc: 'software' },
+    { id: 'curierat', alt: 'depozit', label: 'Curierat & Depozit', sub: 'AWB · Rute · WMS', pos: [-1.18, -1.1, 0.95], yaw: 0.14, icon: 'box', svc: 'software' },
+    { id: 'bi', label: 'BI & Analytics', sub: 'Rapoarte · KPI · Decizii', pos: [2.0, 0.96, 0.45], yaw: -0.26, icon: 'bars', svc: 'software' },
+    { id: 'infra', label: 'Infrastructură & Cloud', sub: 'Servere · Rețea · Backup', pos: [2.12, -0.08, 0.68], yaw: -0.26, icon: 'server', svc: 'infra' },
+    { id: 'security', label: 'Cyber Security', sub: 'SOC · Firewall · Audit', pos: [1.22, -1.1, 0.95], yaw: -0.14, icon: 'shield', svc: 'security' }
+  ];
+  const iconMats = [];
+  function std(opts) { opts.transparent = true; const m = new THREE.MeshStandardMaterial(opts); iconMats.push(m); return m; }
+  const M = {
+    body: std({ color: 0x1d5fe0, metalness: 0.5, roughness: 0.3, envMapIntensity: 1.1, emissive: 0x0b2f7a, emissiveIntensity: 0.22 }),
+    dark: std({ color: 0x0d2140, metalness: 0.6, roughness: 0.34, envMapIntensity: 1.0, emissive: 0x06142e, emissiveIntensity: 0.3 }),
+    cyan: std({ color: 0x19cbd3, metalness: 0.3, roughness: 0.24, envMapIntensity: 1.1, emissive: 0x19cbd3, emissiveIntensity: 0.28 }),
+    metal: std({ color: 0x1a2530, metalness: 0.9, roughness: 0.36, envMapIntensity: 1.2 }),
+    glass: std({ color: 0x8fe9f2, metalness: 0.1, roughness: 0.1, envMapIntensity: 1.3, emissive: 0x2adce5, emissiveIntensity: 0.2, opacity: 0.92 })
   };
-  var glowMat = new THREE.MeshBasicMaterial({ color: 0x8ff7f7, transparent: true });
-  var lineMat = new THREE.LineBasicMaterial({ color: 0x8ff7f7, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
-  iconMats.push(glowMat, lineMat);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0x8ff7f7, transparent: true, toneMapped: false });
+  const amberMat = new THREE.MeshBasicMaterial({ color: 0xffb454, transparent: true, toneMapped: false });
+  iconMats.push(glowMat, amberMat);
 
   function rrect(w, h, r) {
-    var s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+    const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
     s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
     s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
     s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
@@ -372,35 +203,25 @@
     return s;
   }
   function extrude(shape, depth, bevel) {
-    var g = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 12 });
+    const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 12 });
     g.center();
     return g;
   }
-  function neon(geo, angle) { return new THREE.LineSegments(new THREE.EdgesGeometry(geo, angle || 30), lineMat); }
   function gearShape(rO, rI, teeth, hole) {
-    var s = new THREE.Shape(), p = Math.PI * 2 / teeth;
-    for (var t = 0; t < teeth; t++) {
-      var a = t * p, pts = [[a, rI], [a + p * 0.16, rO], [a + p * 0.46, rO], [a + p * 0.62, rI]];
-      for (var j = 0; j < 4; j++) {
-        var x = Math.cos(pts[j][0]) * pts[j][1], y = Math.sin(pts[j][0]) * pts[j][1];
+    const s = new THREE.Shape(), p = Math.PI * 2 / teeth;
+    for (let t = 0; t < teeth; t++) {
+      const a = t * p, pts = [[a, rI], [a + p * 0.16, rO], [a + p * 0.46, rO], [a + p * 0.62, rI]];
+      for (let j = 0; j < 4; j++) {
+        const x = Math.cos(pts[j][0]) * pts[j][1], y = Math.sin(pts[j][0]) * pts[j][1];
         if (t === 0 && j === 0) s.moveTo(x, y); else s.lineTo(x, y);
       }
     }
     s.closePath();
-    var hp = new THREE.Path(); hp.absarc(0, 0, hole, 0, Math.PI * 2, true); s.holes.push(hp);
-    return s;
-  }
-  function cloudShape(k) {
-    var s = new THREE.Shape();
-    s.moveTo(-0.22 * k, -0.13 * k);
-    s.lineTo(0.3 * k, -0.12 * k);
-    s.absarc(0.3 * k, 0, 0.12 * k, -Math.PI / 2, Math.PI / 2, false);
-    s.absarc(0.06 * k, 0.1 * k, 0.2 * k, 0.1, Math.PI - 0.35, false);
-    s.absarc(-0.22 * k, 0.01 * k, 0.14 * k, 1.0, Math.PI * 1.5, false);
+    const hp = new THREE.Path(); hp.absarc(0, 0, hole, 0, Math.PI * 2, true); s.holes.push(hp);
     return s;
   }
   function shieldShape(k) {
-    var s = new THREE.Shape();
+    const s = new THREE.Shape();
     s.moveTo(0, 0.34 * k);
     s.bezierCurveTo(0.1 * k, 0.29 * k, 0.2 * k, 0.27 * k, 0.28 * k, 0.26 * k);
     s.lineTo(0.28 * k, 0.02 * k);
@@ -410,565 +231,437 @@
     s.bezierCurveTo(-0.2 * k, 0.27 * k, -0.1 * k, 0.29 * k, 0, 0.34 * k);
     return s;
   }
-
-  var screenCanvas = document.createElement('canvas'); screenCanvas.width = 512; screenCanvas.height = 320;
-  var screenTex = new THREE.CanvasTexture(screenCanvas);
-  screenTex.generateMipmaps = false; screenTex.minFilter = THREE.LinearFilter;
-  function drawScreen() {
-    var g = screenCanvas.getContext('2d');
-    var grd = g.createLinearGradient(0, 0, 512, 320); grd.addColorStop(0, '#0b2a5c'); grd.addColorStop(1, '#061530');
-    g.fillStyle = grd; g.fillRect(0, 0, 512, 320);
-    g.strokeStyle = 'rgba(143,247,247,0.6)'; g.lineWidth = 8; g.strokeRect(4, 4, 504, 312);
-    g.save();
-    g.fillStyle = '#8ff7f7'; g.shadowColor = '#19cbd3'; g.shadowBlur = 26;
-    g.font = '800 150px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; g.textBaseline = 'middle';
-    g.fillText('</>', 44, 168);
-    g.restore();
-    [[292, 78, 160], [292, 124, 118], [292, 170, 176], [292, 216, 96], [292, 262, 138]].forEach(function (b, i) {
-      g.fillStyle = i % 2 ? 'rgba(143,247,247,0.9)' : 'rgba(42,220,229,0.6)';
-      roundRectPath(g, b[0], b[1] - 9, b[2], 18, 9); g.fill();
-    });
-    screenTex.needsUpdate = true;
-  }
-
-  function iconSoftware() {
-    var g = new THREE.Group();
-    var frameGeo = extrude(rrect(0.9, 0.6, 0.07), 0.05, 0.018);
-    var frame = new THREE.Mesh(frameGeo, M.body); g.add(frame); frame.add(neon(frameGeo, 35));
-    var screen = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.49), new THREE.MeshBasicMaterial({ map: screenTex, transparent: true }));
-    iconMats.push(screen.material);
-    screen.position.z = 0.046; g.add(screen);
-    var neck = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.05), M.dark); neck.position.set(0, -0.36, -0.01); g.add(neck);
-    var baseGeo = extrude(rrect(0.36, 0.05, 0.02), 0.14, 0.01);
-    var base = new THREE.Mesh(baseGeo, M.body); base.position.set(0, -0.44, 0); g.add(base);
-    var gearGeo = extrude(gearShape(0.17, 0.125, 10, 0.05), 0.05, 0.012);
-    var gear = new THREE.Mesh(gearGeo, M.cyan); gear.position.set(0.4, -0.2, 0.14); g.add(gear); gear.add(neon(gearGeo, 40));
-    var cloudGeo = extrude(cloudShape(0.95), 0.07, 0.02);
-    var cloud = new THREE.Mesh(cloudGeo, M.glass); cloud.position.set(0.34, 0.44, 0.08); g.add(cloud); cloud.add(neon(cloudGeo, 55));
-    var px = [];
-    for (var k = 0; k < 4; k++) {
-      var c = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), M.cyan);
-      c.position.set(-0.56 + k * 0.1, 0.34 + (k % 2) * 0.09, 0.1); g.add(c); px.push(c);
-    }
-    g.userData.update = function (t, hov) {
-      gear.rotation.z = -t * (0.7 + hov * 2.4);
-      cloud.position.y = 0.44 + Math.sin(t * 1.3) * 0.03;
-      for (var q = 0; q < px.length; q++) {
-        px[q].position.y = 0.34 + (q % 2) * 0.09 + Math.sin(t * 1.7 + q) * 0.025;
-        px[q].rotation.x = t * (0.6 + q * 0.2); px[q].rotation.y = t * 0.5;
-      }
-    };
-    return g;
-  }
-  function iconArch() {
-    var g = new THREE.Group(), stack = new THREE.Group(); g.add(stack);
-    var slabGeo = extrude(rrect(0.62, 0.15, 0.035), 0.36, 0.015);
-    var leds = [];
-    for (var s = 0; s < 3; s++) {
-      var y = -0.24 + s * 0.2;
-      var slab = new THREE.Mesh(slabGeo, s === 1 ? M.body : M.dark); slab.position.y = y; stack.add(slab); slab.add(neon(slabGeo, 35));
-      var strip = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.026), glowMat); strip.position.set(-0.11, y, 0.2); stack.add(strip);
-      for (var k = 0; k < 3; k++) {
-        var led = new THREE.Mesh(new THREE.SphereGeometry(0.019, 10, 8), new THREE.MeshBasicMaterial({ color: 0x8ff7f7, transparent: true }));
-        led.position.set(0.12 + k * 0.058, y, 0.2); stack.add(led); leds.push(led);
-      }
-    }
-    stack.rotation.set(0.3, -0.5, 0);
-    var cloudGeo = extrude(cloudShape(1.05), 0.09, 0.02);
-    var cloud = new THREE.Mesh(cloudGeo, M.glass); cloud.position.set(0, 0.36, 0.02); g.add(cloud); cloud.add(neon(cloudGeo, 55));
-    var nodes = [[-0.66, 0.1], [-0.62, -0.3], [0.66, 0.12], [0.62, -0.28]], pulses = [];
-    nodes.forEach(function (nd, q) {
-      var from = new THREE.Vector3(nd[0] < 0 ? -0.26 : 0.26, nd[1] * 0.4, 0.05), to = new THREE.Vector3(nd[0], nd[1], 0.05);
-      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([from, to]), lineMat));
-      var dot = new THREE.Mesh(new THREE.SphereGeometry(0.036, 14, 10), M.cyan); dot.position.copy(to); g.add(dot);
-      var pul = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), glowMat); g.add(pul);
-      pulses.push({ m: pul, a: from, b: to, o: q * 0.25 });
-    });
-    g.userData.update = function (t, hov) {
-      cloud.position.y = 0.36 + Math.sin(t * 1.1) * 0.03;
-      for (var q = 0; q < leds.length; q++) leds[q].material.opacity = gFade * (0.45 + 0.55 * (0.5 + 0.5 * Math.sin(t * (3 + hov * 5) + q * 1.7)));
-      for (q = 0; q < pulses.length; q++) {
-        var pp = pulses[q], f = (t * (0.55 + hov) + pp.o) % 1;
-        pp.m.position.lerpVectors(pp.a, pp.b, f);
-      }
-    };
-    return g;
-  }
-  function iconData() {
-    var g = new THREE.Group(), db = new THREE.Group(); g.add(db);
-    var cylGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.12, 40, 1);
-    var rimGeo = new THREE.TorusGeometry(0.25, 0.009, 8, 64);
-    for (var s = 0; s < 3; s++) {
-      var c = new THREE.Mesh(cylGeo, s === 1 ? M.dark : M.body); c.position.y = -0.2 + s * 0.15; db.add(c);
-      var rim = new THREE.Mesh(rimGeo, glowMat); rim.rotation.x = Math.PI / 2; rim.position.y = c.position.y + 0.06; db.add(rim);
-    }
-    db.rotation.x = 0.38; db.position.set(-0.16, 0.02, -0.12);
-    var shieldGeo = extrude(shieldShape(0.62), 0.06, 0.02);
-    var shield = new THREE.Mesh(shieldGeo, M.cyan); shield.position.set(0.1, -0.14, 0.26); g.add(shield); shield.add(neon(shieldGeo, 40));
-    var lock = new THREE.Group(); lock.position.set(0.1, -0.16, 0.33); g.add(lock);
-    var lockGeo = extrude(rrect(0.15, 0.12, 0.03), 0.04, 0.008);
-    lock.add(new THREE.Mesh(lockGeo, M.dark));
-    var shackle = new THREE.Mesh(new THREE.TorusGeometry(0.048, 0.013, 10, 24, Math.PI), glowMat); shackle.position.y = 0.06; lock.add(shackle);
-    var hole = new THREE.Mesh(new THREE.CircleGeometry(0.016, 16), glowMat); hole.position.z = 0.03; lock.add(hole);
-    var bars = [], barGeo = new THREE.BoxGeometry(0.06, 1, 0.06); barGeo.translate(0, 0.5, 0);
-    for (var b = 0; b < 4; b++) {
-      var bar = new THREE.Mesh(barGeo, b % 2 ? M.cyan : M.body); bar.position.set(0.3 + b * 0.09, -0.18, -0.24); g.add(bar); bars.push(bar);
-    }
-    g.userData.update = function (t, hov) {
-      for (var q = 0; q < bars.length; q++) bars[q].scale.y = (0.16 + 0.1 * (q + 1)) * (0.78 + 0.22 * Math.sin(t * (1.8 + hov * 3) + q * 1.3));
-      shield.rotation.y = Math.sin(t * 0.9) * 0.18;
-      lock.rotation.y = shield.rotation.y;
-    };
-    return g;
-  }
-
-  /* =====================================================================
-     4. Panourile: text desenat în canvas (fonturile clientului) + iconițe
-     ===================================================================== */
-  var FAM_T = '"Barlow Condensed", "Arial Narrow", Arial, sans-serif';
-  var FAM_B = 'Inter, "Segoe UI", Arial, sans-serif';
-  var U = 512;
-  var measure = document.createElement('canvas').getContext('2d');
-  function font(weight, size, fam) { return weight + ' ' + Math.round(size * U) + 'px ' + fam; }
-  function tw(f, s) { measure.font = f; return measure.measureText(s).width / U; }
-  function wrap(f, text, maxW) {
-    var words = text.split(' '), lines = [], cur = '';
-    words.forEach(function (w) { var t = cur ? cur + ' ' + w : w; if (tw(f, t) > maxW && cur) { lines.push(cur); cur = w; } else cur = t; });
-    if (cur) lines.push(cur);
-    return lines;
-  }
-
-  var PANELS = [
-    { title: ['Soluții', 'Software'], desc: 'Dezvoltăm și implementăm soluții software adaptate nevoilor tale.', tags: ['ERP', 'CRM', 'WMS', 'Portale'],
-      cfg: 0, x: -1.05, top: 1.0, slant: -0.577, descW: 0.98, cols: 2, icon: { x: -0.55, y: 1.4, s: 0.46, build: iconSoftware } },
-    { title: ['Arhitectură', '& Integrare'], desc: 'Conectăm sisteme, procese și echipe pentru un ecosistem unitar și sigur.', tags: ['Cloud', 'API', 'Securitate', 'Infrastructură'],
-      cfg: 1, x: 0.2, top: 0.86, slant: 0.577, descW: 0.94, cols: 2, icon: { x: 0.63, y: 1.24, s: 0.43, build: iconArch } },
-    { title: ['Date &', 'Tehnologie'], desc: 'Transformăm datele în decizii inteligente și rezultate reale.', tags: ['BI & Analytics', 'AI', 'Automatizare', 'Monitoring'],
-      cfg: 2, x: -0.42, top: -0.52, slant: 0, descW: 1.42, cols: 4, tagsX: -1.26, icon: { x: -0.95, y: -0.9, s: 0.46, build: iconData } }
-  ];
-
-  function layoutPanel(pn, compact) {
-    /* text mai mare, mai alb și mai gros decât în imaginea originală, pentru lizibilitate */
-    var ops = [], y = pn.top, S = compact ? 0.3 : 0.19;   /* pe telefon: doar titluri, mari */
-    function xAt(yy) { return pn.x + pn.slant * (pn.top - yy); }
-    var tf = font(800, S, FAM_T);
-    pn.title.forEach(function (line) {
-      ops.push({ t: 'text', font: tf, text: line.toUpperCase(), x: xAt(y - S * 0.5), y: y - S * 0.82, size: S, color: '#ffffff', stroke: 0.06 });
-      y -= S * 0.93;
-    });
-    y -= 0.03;
-    ops.push({ t: 'bar', x: xAt(y), y: y, w: compact ? 0.56 : 0.4, h: compact ? 0.022 : 0.016 });
-    y -= 0.065;
-    if (!compact) {
-      var DS = 0.078, df = font(500, DS, FAM_B);
-      wrap(df, pn.desc, pn.descW).forEach(function (line) {
-        ops.push({ t: 'text', font: df, text: line, x: xAt(y - DS * 0.7), y: y - DS * 0.95, size: DS, color: '#f6fcff', stroke: 0.09 });
-        y -= DS * 1.32;
+  const ICONS = {
+    erp() {
+      const g = new THREE.Group(), cubes = [];
+      const geo = new RoundedBoxGeometry(0.3, 0.3, 0.3, 3, 0.05);
+      [[-0.14, -0.1, 0, M.dark], [0.14, -0.1, 0.05, M.body], [0, 0.18, 0.02, M.cyan]].forEach((c, i) => {
+        const m = new THREE.Mesh(geo, c[3]); m.position.set(c[0], c[1], c[2]); m.rotation.set(0.2, 0.5 + i * 0.3, 0); g.add(m); cubes.push(m);
       });
-      y -= 0.04;
-      var gf = font(700, 0.058, FAM_B), padX = 0.055, ph = 0.12, gap = 0.035;
-      var widths = pn.tags.map(function (tg) { return tw(gf, tg) + padX * 2; });
-      if (pn.cols === 2) {
-        var c0 = Math.max(widths[0], widths[2]), c1 = Math.max(widths[1], widths[3]);
-        for (var r = 0; r < 2; r++) {
-          var yy = y - r * (ph + gap), bx = xAt(yy - ph / 2);
-          ops.push({ t: 'pill', font: gf, text: pn.tags[r * 2], x: bx, y: yy, w: c0, h: ph });
-          ops.push({ t: 'pill', font: gf, text: pn.tags[r * 2 + 1], x: bx + c0 + gap, y: yy, w: c1, h: ph });
-        }
-      } else {
-        var px = pn.tagsX;
-        pn.tags.forEach(function (tg, q) { ops.push({ t: 'pill', font: gf, text: tg, x: px, y: y - 0.02, w: widths[q], h: ph }); px += widths[q] + gap; });
+      g.userData.update = (t, hov) => { cubes.forEach((c, i) => { c.rotation.y = 0.5 + i * 0.3 + t * (0.25 + hov * 0.6) * (i % 2 ? -1 : 1); }); cubes[2].position.y = 0.18 + Math.sin(t * 1.3) * 0.02; };
+      return g;
+    },
+    gear() {
+      const g = new THREE.Group();
+      const big = new THREE.Mesh(extrude(gearShape(0.3, 0.23, 10, 0.08), 0.08, 0.015), M.cyan); g.add(big);
+      const small = new THREE.Mesh(extrude(gearShape(0.17, 0.125, 8, 0.045), 0.07, 0.012), M.body); small.position.set(0.26, 0.3, 0.06); g.add(small); big.position.x = -0.06;
+      g.userData.update = (t, hov) => { big.rotation.z = -t * (0.5 + hov * 1.6); small.rotation.z = t * (0.5 + hov * 1.6) * 1.25 + 0.2; };
+      return g;
+    },
+    box() {
+      const g = new THREE.Group();
+      const b = new THREE.Mesh(new RoundedBoxGeometry(0.46, 0.34, 0.36, 3, 0.03), M.body); g.add(b);
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.06, 0.37), M.cyan); band.position.y = 0.05; g.add(band);
+      const band2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.35, 0.37), M.cyan); g.add(band2);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.008, 6, 64), glowMat); ring.rotation.x = Math.PI / 2; ring.position.y = -0.2; g.add(ring);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), glowMat); g.add(dot);
+      g.rotation.set(0.35, -0.6, 0);
+      g.userData.update = (t, hov) => { const a = t * (0.9 + hov * 1.5); dot.position.set(Math.cos(a) * 0.4, -0.2, Math.sin(a) * 0.4); b.rotation.y = band.rotation.y = band2.rotation.y = Math.sin(t * 0.6) * 0.15; };
+      return g;
+    },
+    bars() {
+      const g = new THREE.Group(), bars = [];
+      const barGeo = new THREE.BoxGeometry(0.1, 1, 0.1); barGeo.translate(0, 0.5, 0);
+      for (let b = 0; b < 5; b++) { const bar = new THREE.Mesh(barGeo, b % 2 ? M.cyan : M.body); bar.position.set(-0.28 + b * 0.14, -0.26, 0); g.add(bar); bars.push(bar); }
+      const line = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.006, 6, 48, Math.PI * 0.9), glowMat); line.position.set(0, -0.2, 0.1); line.rotation.z = 0.1; g.add(line);
+      g.rotation.set(0.15, -0.45, 0);
+      g.userData.update = (t, hov) => { bars.forEach((bar, q) => { bar.scale.y = (0.16 + 0.09 * (q + 1)) * (0.8 + 0.2 * Math.sin(t * (1.6 + hov * 3) + q * 1.3)); }); };
+      return g;
+    },
+    server() {
+      /* rack cu proporții reale: dulap îngust și înalt, 8 unități, LED-uri discrete */
+      const g = new THREE.Group(), leds = [];
+      const cab = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.86, 0.34, 3, 0.02), M.metal); g.add(cab);
+      const unitGeo = new RoundedBoxGeometry(0.36, 0.08, 0.06, 2, 0.01);
+      for (let s = 0; s < 8; s++) {
+        const y = -0.36 + s * 0.1;
+        const u = new THREE.Mesh(unitGeo, s % 3 === 1 ? M.body : M.dark); u.position.set(0, y, 0.17); g.add(u);
+        const led = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 6), new THREE.MeshBasicMaterial({ color: s === 5 ? 0xffb454 : 0x8ff7f7, transparent: true, toneMapped: false }));
+        led.position.set(0.13, y, 0.205); g.add(led); leds.push(led); iconMats.push(led.material);
+        const led2 = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), new THREE.MeshBasicMaterial({ color: 0x3fd68c, transparent: true, toneMapped: false }));
+        led2.position.set(0.1, y, 0.205); g.add(led2); leds.push(led2); iconMats.push(led2.material);
       }
+      g.rotation.set(0.1, -0.5, 0);
+      g.userData.update = (t, hov) => { leds.forEach((l, q) => { const on = 0.5 + 0.5 * Math.sin(t * (1.3 + hov * 3) + q * 2.3); l.material.opacity = gFade * (0.3 + 0.7 * (on > 0.5 ? 1 : 0.3)); }); };
+      return g;
+    },
+    shield() {
+      const g = new THREE.Group();
+      const sh = new THREE.Mesh(extrude(shieldShape(0.95), 0.07, 0.02), M.cyan); g.add(sh);
+      const inner = new THREE.Mesh(extrude(shieldShape(0.62), 0.03, 0.01), M.dark); inner.position.z = 0.05; g.add(inner);
+      const lock = new THREE.Group(); lock.position.set(0, -0.02, 0.09); g.add(lock);
+      lock.add(new THREE.Mesh(extrude(rrect(0.13, 0.1, 0.025), 0.035, 0.006), M.body));
+      const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.011, 8, 22, Math.PI), glowMat); shackle.position.y = 0.05; lock.add(shackle);
+      /* graf de noduri în jurul scutului: un nod „amenințare” se stinge când e neutralizat */
+      const nodes = [], ang = [0.3, 1.2, 2.1, 3.0, 3.9, 4.9, 5.7];
+      ang.forEach((a, i) => { const n = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), i === 3 ? amberMat : glowMat); n.position.set(Math.cos(a) * 0.46, Math.sin(a) * 0.4, 0.02); g.add(n); nodes.push(n); });
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.005, 6, 64), glowMat); ring.scale.y = 0.87; g.add(ring);
+      g.userData.update = (t, hov) => {
+        sh.rotation.y = inner.rotation.y = lock.rotation.y = Math.sin(t * 0.8) * 0.22;
+        ring.rotation.set(Math.sin(t * 0.5) * 0.3, t * (0.3 + hov), 0); ring.material.opacity = gFade * (0.3 + hov * 0.4);
+        const phase = (t * 0.35) % 1;
+        nodes[3].material.opacity = gFade * (phase < 0.5 ? 0.9 : 0.25);
+        nodes[3].scale.setScalar(phase < 0.5 ? 1.35 : 0.8);
+      };
+      return g;
     }
-    var b = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
-    ops.forEach(function (o) {
-      var w = o.t === 'text' ? tw(o.font, o.text) : o.w;
-      var top = o.t === 'text' ? o.y + o.size * 0.92 : o.y;
-      var bot = o.t === 'text' ? o.y - o.size * 0.28 : o.y - o.h;
-      b.minX = Math.min(b.minX, o.x); b.maxX = Math.max(b.maxX, o.x + w); b.maxY = Math.max(b.maxY, top); b.minY = Math.min(b.minY, bot);
-    });
-    b.ops = ops;
-    b.xAt = xAt;
-    return b;
-  }
-
-  var textMatTpl = {
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: [
-      'uniform sampler2D uMap; uniform float uReveal; uniform float uFade;',
-      'varying vec2 vUv;',
-      'void main(){',
-      '  vec4 t = texture2D(uMap, vUv);',
-      '  float yd = 1.0 - vUv.y;',
-      '  float front = uReveal * 1.25 - 0.12;',
-      '  float m = 1.0 - smoothstep(front - 0.1, front, yd);',
-      '  float scan = exp(-pow((yd - front + 0.05) * 22.0, 2.0)) * (1.0 - step(0.999, uReveal));',
-      '  vec3 c = t.rgb + vec3(0.5, 0.97, 1.0) * scan * 0.9;',
-      '  gl_FragColor = vec4(c, t.a * m * uFade);',
-      '}'
-    ].join('\n')
   };
-  var hitMeshes = [];
-  var hitMat = new THREE.MeshBasicMaterial({ visible: false });
-  PANELS.forEach(function (pn, idx) {
-    pn.group = new THREE.Group();
-    content.add(pn.group);
-    pn.canvas = document.createElement('canvas'); pn.canvas.width = pn.canvas.height = 64;
-    pn.tex = new THREE.CanvasTexture(pn.canvas);
-    pn.tex.anisotropy = maxAniso;
-    pn.mat = new THREE.ShaderMaterial({
-      uniforms: { uMap: { value: pn.tex }, uReveal: { value: 0 }, uFade: { value: 1 } },
-      vertexShader: textMatTpl.vertexShader, fragmentShader: textMatTpl.fragmentShader,
-      transparent: true, depthWrite: false
-    });
-    pn.text = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), pn.mat);
-    pn.text.renderOrder = 4;
-    pn.group.add(pn.text);
-    pn.icon = pn.icon.build ? (function (ic) { var obj = ic.build(); obj.userData.base = ic; return obj; })(pn.icon) : null;
-    var ib = pn.icon.userData.base;
-    pn.icon.position.set(ib.x, ib.y, RB.zOn(pn.cfg, ib.x, ib.y) + 0.34);
-    pn.icon.rotation.set(0.16, idx === 1 ? 0.3 : -0.32, 0);
-    pn.icon.scale.setScalar(0.0001);
-    pn.group.add(pn.icon);
-    pn.hit = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), hitMat);
-    pn.hit.userData.panel = idx;
-    pn.group.add(pn.hit);
-    hitMeshes.push(pn.hit);
-    pn.hover = 0; pn.lift = 0;
+
+  const cardGeo = new RoundedBoxGeometry(CARD_W, CARD_H, CARD_D, 3, 0.05);
+  const labelGeo = new THREE.PlaneGeometry(CARD_W, CARD_H);
+  function drawLabel(cd, w, h) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, w, h);
+    const x0 = w * 0.385, maxW = w * 0.57, cy = h * 0.5;
+    const fit = (weight, size, fam, str) => { let px = size; g.font = `${weight} ${px}px ${fam}`; const mw = g.measureText(str).width; if (mw > maxW) { px = Math.floor(px * maxW / mw); g.font = `${weight} ${px}px ${fam}`; } return px; };
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#ffffff';
+    fit(700, Math.round(h * 0.25), FAM_T, cd.label);
+    g.fillText(cd.label, x0, cy + h * 0.02);
+    g.fillStyle = 'rgba(160, 214, 224, 0.92)';
+    fit(500, Math.round(h * 0.12), FAM_B, cd.sub);
+    g.fillText(cd.sub, x0, cy + h * 0.22);
+    g.fillStyle = '#3fd68c'; g.beginPath(); g.arc(w - h * 0.13, h * 0.17, h * 0.03, 0, Math.PI * 2); g.fill();
+    return c;
+  }
+  const hitMeshes = [];
+  CARDS.forEach((cd, i) => {
+    const g = new THREE.Group();
+    g.position.set(cd.pos[0], cd.pos[1], cd.pos[2]);
+    g.rotation.y = cd.yaw;
+    const mat = new THREE.MeshPhysicalMaterial({ color: 0x0c1c2f, metalness: 0.2, roughness: 0.26, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 1.2, transparent: true, opacity: 0.88, sheen: 0.4, sheenColor: new THREE.Color(0x19cbd3), sheenRoughness: 0.6 });
+    const bodyM = new THREE.Mesh(cardGeo, mat); bodyM.userData.card = i; g.add(bodyM); hitMeshes.push(bodyM);
+    const labelTex = new THREE.CanvasTexture(drawLabel(cd, LBL_W, LBL_H));
+    labelTex.colorSpace = THREE.SRGBColorSpace; labelTex.anisotropy = Math.min(8, maxAniso);
+    const labelMat = new THREE.MeshBasicMaterial({ map: labelTex, transparent: true, toneMapped: false, depthWrite: false });
+    const label = new THREE.Mesh(labelGeo, labelMat); label.position.z = CARD_D / 2 + 0.004; g.add(label);
+    /* bara de stare de la baza plăcii, se aprinde pe modulul activ */
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(CARD_W - 0.16, 0.012), new THREE.MeshBasicMaterial({ color: 0x8ff7f7, transparent: true, opacity: 0, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
+    bar.position.set(0, -CARD_H / 2 + 0.05, CARD_D / 2 + 0.005); g.add(bar);
+    const icon = ICONS[cd.icon](); icon.scale.setScalar(cd.icon === 'server' ? 0.26 : 0.29); icon.position.set(-CARD_W / 2 + 0.18, 0.0, CARD_D / 2 + 0.1); g.add(icon);
+    content.add(g);
+    Object.assign(cd, { group: g, body: bodyM, mat, labelMat, bar, icon, hover: 0, active: 0, phase: i * 1.37, base: new THREE.Vector3(cd.pos[0], cd.pos[1], cd.pos[2]) });
   });
 
-  function drawPanel(pn, compact) {
-    var lay = layoutPanel(pn, compact), pad = 0.1;
-    var bw = lay.maxX - lay.minX + pad * 2, bh = lay.maxY - lay.minY + pad * 2;
-    var cw = 64, ch = 64;
-    while (cw < bw * U && cw < 2048) cw *= 2;
-    while (ch < bh * U && ch < 2048) ch *= 2;
-    var c = pn.canvas; c.width = cw; c.height = ch;
-    var g = c.getContext('2d');
-    g.clearRect(0, 0, cw, ch);
-    var ox = lay.minX - pad, oy = lay.maxY + pad;
-    function X(x) { return (x - ox) * U; }
-    function Y(y) { return (oy - y) * U; }
-    /* plăcuță de sticlă întunecată sub tot blocul (paralelogram pe direcția benzii) */
-    var relL = 1e9, relR = -1e9;
-    lay.ops.forEach(function (o) {
-      var w = o.t === 'text' ? tw(o.font, o.text) : o.w, base = lay.xAt(o.y);
-      relL = Math.min(relL, o.x - base); relR = Math.max(relR, o.x + w - base);
+  /* =====================================================================
+     5. Fluxurile de lumină: tuburi subțiri de la fiecare modul spre ecran
+     ===================================================================== */
+  CARDS.forEach((cd, i) => {
+    const sx = Math.sign(cd.pos[0]), low = cd.pos[1] < -0.6;
+    const a = low ? new THREE.Vector3(cd.pos[0] - sx * 0.2, cd.pos[1] + CARD_H / 2, cd.pos[2] - 0.02) : new THREE.Vector3(cd.pos[0] - sx * CARD_W * 0.46, cd.pos[1], cd.pos[2] - 0.02);
+    const b = low ? new THREE.Vector3(cd.pos[0] * 0.55, -SLAB_H / 2 + 0.02, 0.02) : new THREE.Vector3(sx * (SLAB_W / 2 - 0.02), cd.pos[1] * 0.6, 0.02);
+    const mid = new THREE.Vector3().lerpVectors(a, b, 0.5).add(new THREE.Vector3(0, low ? -0.06 : 0.08, 0.3));
+    const curve = new THREE.CatmullRomCurve3([a, mid, b], false, 'centripetal', 0.5);
+    const geo = new THREE.TubeGeometry(curve, lowTier ? 28 : 48, 0.008, 6, false);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uFade: { value: 1 }, uReveal: { value: 0 }, uBoost: { value: 0 }, uOffset: { value: i * 0.37 }, uColor: { value: new THREE.Color('#5fc9d0') }, uHot: { value: new THREE.Color('#dffdff') } },
+      vertexShader: `
+        varying vec2 vUv; varying float vNV;
+        void main(){ vUv = uv; vec3 n = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vNV = abs(dot(n, normalize(-mv.xyz))); gl_Position = projectionMatrix * mv; }`,
+      fragmentShader: `
+        uniform float uTime, uFade, uReveal, uBoost, uOffset; uniform vec3 uColor, uHot;
+        varying vec2 vUv; varying float vNV;
+        void main(){
+          float x = vUv.x;
+          float ends = smoothstep(0.0, 0.1, x) * smoothstep(1.0, 0.86, x);
+          float rev = smoothstep(x - 0.03, x + 0.03, uReveal);
+          float p = fract(x - uTime * (0.3 + uBoost * 0.45) + uOffset);
+          float pulse = smoothstep(0.0, 0.1, p) * smoothstep(0.34, 0.1, p);
+          float p2 = fract(x - uTime * 0.19 + uOffset + 0.5);
+          float pulse2 = smoothstep(0.0, 0.08, p2) * smoothstep(0.26, 0.08, p2) * 0.4;
+          float core = pow(vNV, 1.3);
+          float a = (0.12 + 0.2 * uBoost + pulse * (0.65 + 0.5 * uBoost) + pulse2) * ends * rev * core * uFade;
+          vec3 c = mix(uColor, uHot, pulse * 0.8);
+          gl_FragColor = vec4(c * a, a);
+        }`,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false
     });
-    var pp = 0.055, yT = lay.maxY + pp, yB = lay.minY - pp;
-    var poly = [[lay.xAt(yT) + relL - pp, yT], [lay.xAt(yT) + relR + pp, yT], [lay.xAt(yB) + relR + pp, yB], [lay.xAt(yB) + relL - pp, yB]];
-    g.save();
-    g.beginPath();
-    poly.forEach(function (pt, i) { if (i) g.lineTo(X(pt[0]), Y(pt[1])); else g.moveTo(X(pt[0]), Y(pt[1])); });
-    g.closePath();
-    g.lineJoin = 'round';
-    g.fillStyle = 'rgba(3, 14, 34, 0.42)'; g.strokeStyle = 'rgba(3, 14, 34, 0.42)'; g.lineWidth = 0.05 * U;
-    g.shadowColor = 'rgba(0, 0, 0, 0.35)'; g.shadowBlur = 0.03 * U; g.shadowOffsetY = 0.01 * U;
-    g.stroke(); g.shadowColor = 'transparent'; g.fill();
-    g.strokeStyle = 'rgba(143, 247, 247, 0.2)'; g.lineWidth = 0.004 * U; g.stroke();
-    g.restore();
-    lay.ops.forEach(function (o) {
-      g.save();
-      if (o.t === 'text') {
-        g.font = o.font; g.textBaseline = 'alphabetic'; g.lineJoin = 'round';
-        g.strokeStyle = 'rgba(2, 10, 26, 0.6)'; g.lineWidth = o.size * (o.stroke || 0.08) * U;
-        g.strokeText(o.text, X(o.x), Y(o.y));
-        g.fillStyle = o.color;
-        g.shadowColor = 'rgba(2, 12, 30, 0.85)'; g.shadowBlur = 0.03 * U; g.shadowOffsetY = 0.006 * U;
-        g.fillText(o.text, X(o.x), Y(o.y));
-      } else if (o.t === 'bar') {
-        var grd = g.createLinearGradient(X(o.x), 0, X(o.x + o.w), 0);
-        grd.addColorStop(0, 'rgba(143,247,247,1)'); grd.addColorStop(1, 'rgba(143,247,247,0)');
-        g.shadowColor = 'rgba(143,247,247,0.9)'; g.shadowBlur = 0.03 * U;
-        g.fillStyle = grd; g.fillRect(X(o.x), Y(o.y), o.w * U, o.h * U);
-      } else {
-        var px = X(o.x), py = Y(o.y), pw = o.w * U, phh = o.h * U;
-        roundRectPath(g, px, py, pw, phh, phh / 2);
-        g.fillStyle = 'rgba(4, 20, 48, 0.74)'; g.fill();
-        g.lineWidth = Math.max(2, 0.007 * U); g.strokeStyle = 'rgba(143,247,247,0.92)';
-        g.shadowColor = 'rgba(42,220,229,0.85)'; g.shadowBlur = 0.022 * U; g.stroke();
-        g.shadowBlur = 0; g.font = o.font; g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillText(o.text, px + pw / 2, py + phh / 2 + 0.004 * U);
-      }
-      g.restore();
+    content.add(new THREE.Mesh(geo, mat));
+    cd.stream = mat;
+  });
+
+  /* =====================================================================
+     6. Reflexia pe suprafața întunecată (copie oglindită, se stinge cu înălțimea)
+     ===================================================================== */
+  const refl = new THREE.Group();
+  refl.position.y = 2 * FLOOR_Y; refl.scale.y = -1;
+  content.add(refl);
+  const REFL_VS = `uniform float uCenterH; varying vec2 vUv; varying float vH;
+    void main(){ vUv = uv; vH = uCenterH + position.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+  const REFL_FS = `uniform sampler2D uMap; uniform float uHasMap; uniform vec3 uColor; uniform float uAlpha, uFade;
+    varying vec2 vUv; varying float vH;
+    void main(){
+      vec3 c = uColor; float a = 1.0;
+      if (uHasMap > 0.5) { vec4 s = texture2D(uMap, vUv); c = s.rgb * uColor; a = s.a; }
+      float f = smoothstep(1.5, 0.0, vH);
+      gl_FragColor = vec4(c, uAlpha * f * f * a * uFade);
+    }`;
+  function reflMat(map, color, alpha) {
+    return new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: map || null }, uHasMap: { value: map ? 1 : 0 }, uColor: { value: new THREE.Color(color) }, uAlpha: { value: alpha }, uFade: { value: 1 }, uCenterH: { value: 0 } },
+      vertexShader: REFL_VS, fragmentShader: REFL_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false
     });
-    pn.tex.needsUpdate = true;
-    var pw2 = cw / U, ph2 = ch / U;
-    var cx = (lay.minX + lay.maxX) / 2, cy = (lay.minY + lay.maxY) / 2;
-    pn.zText = RB.zOn(pn.cfg, cx, cy) + 0.14;
-    pn.text.scale.set(pw2, ph2, 1);
-    pn.text.position.set(ox + pw2 / 2, oy - ph2 / 2, pn.zText);
-    var ib = pn.icon.userData.base, r = 0.36;
-    var hx0 = Math.min(lay.minX, ib.x - r), hx1 = Math.max(lay.maxX, ib.x + r);
-    var hy0 = Math.min(lay.minY, ib.y - r), hy1 = Math.max(lay.maxY, ib.y + r);
-    pn.hit.scale.set(hx1 - hx0, hy1 - hy0, 1);
-    pn.hit.position.set((hx0 + hx1) / 2, (hy0 + hy1) / 2, pn.zText);
-    pn.center = { x: (hx0 + hx1) / 2, y: (hy0 + hy1) / 2 };
-    var len = Math.sqrt(pn.center.x * pn.center.x + pn.center.y * pn.center.y) || 1;
-    pn.dir = { x: pn.center.x / len, y: pn.center.y / len };
   }
-  var compactMode = null;
-  function drawAll(compact) {
-    compactMode = compact;
-    PANELS.forEach(function (pn) { drawPanel(pn, compact); });
-    drawScreen();
+  const reflPairs = [];
+  (function buildReflections() {
+    const sg = new THREE.Group();
+    const rb = new THREE.Mesh(bodyGeo, reflMat(null, 0x16283f, 0.3)); sg.add(rb);
+    const rs = new THREE.Mesh(screenGeo, reflMat(screenTex, 0xffffff, 0.2)); rs.position.z = SLAB_D / 2 + 0.002; sg.add(rs);
+    refl.add(sg);
+    reflPairs.push({ src: slab, dst: sg, mats: [rb.material, rs.material] });
+    CARDS.forEach(cd => {
+      const cg = new THREE.Group();
+      const b = new THREE.Mesh(cardGeo, reflMat(null, 0x14263c, 0.14)); cg.add(b);
+      refl.add(cg);
+      reflPairs.push({ src: cd.group, dst: cg, mats: [b.material], card: cd });
+    });
+  })();
+  function syncReflections(fade) {
+    for (const p of reflPairs) {
+      p.dst.position.copy(p.src.position); p.dst.rotation.copy(p.src.rotation); p.dst.scale.copy(p.src.scale);
+      const h = p.src.position.y - FLOOR_Y;
+      for (const m of p.mats) { m.uniforms.uCenterH.value = h; m.uniforms.uFade.value = fade * (p.card ? (1 - p.card.hover * 0.3) : 1); }
+    }
+    reflPairs[0].mats[1].uniforms.uColor.value.setScalar(screenMat.color.r);
   }
 
   /* =====================================================================
-     5. Logo MDY în centru (straturile decupate din imaginea clientului)
+     7. Layout: compoziția urmărește elementul .hero-stage din pagină
      ===================================================================== */
-  var logo = new THREE.Group();
-  logo.position.set(-0.02, 0.03, 0.2);
-  content.add(logo);
-  var LW = 0.98, LH = LW * 232 / 258, logoReady = 0;
-  var loader = new THREE.TextureLoader();
-  function logoLayer(url) {
-    var mat = new THREE.ShaderMaterial({
-      uniforms: { uMap: { value: null }, uOpacity: { value: 0 }, uTime: { value: 0 }, uReveal: { value: 0 } },
-      vertexShader: textMatTpl.vertexShader,
-      fragmentShader: [
-        'uniform sampler2D uMap; uniform float uOpacity; uniform float uTime; uniform float uReveal;',
-        'varying vec2 vUv;',
-        'void main(){',
-        '  vec4 t = texture2D(uMap, vUv);',
-        '  float sy = fract(uTime * 0.2) * 1.6 - 0.3;',
-        '  float scan = exp(-pow((vUv.y - sy) * 12.0, 2.0));',
-        '  float m = smoothstep(vUv.x - 0.06, vUv.x, uReveal * 1.12 - 0.06);',
-        '  gl_FragColor = vec4(t.rgb * (1.0 + scan * 0.55), t.a * uOpacity * m);',
-        '}'
-      ].join('\n'),
-      transparent: true, depthWrite: false
-    });
-    loader.load(url, function (tex) {
-      tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
-      mat.uniforms.uMap.value = tex; logoReady++;
-    });
-    return mat;
-  }
-  var emblemMat = logoLayer('assets/img/mdy-logo-emblem.png');
-  var wordMat = logoLayer('assets/img/mdy-logo-wordmark.png');
-  var emblemGeo = new THREE.PlaneGeometry(LW, LH); emblemGeo.translate(0.023 * LW, -0.235 * LH, 0);
-  var emblem = new THREE.Mesh(emblemGeo, emblemMat);
-  emblem.position.set(-0.023 * LW, 0.235 * LH, 0.16); emblem.renderOrder = 5;
-  var wordmark = new THREE.Mesh(new THREE.PlaneGeometry(LW, LH), wordMat); wordmark.renderOrder = 5;
-  var logoHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: sprite, color: 0x19cbd3, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-  logoHalo.scale.set(1.5, 1.5, 1); logoHalo.position.set(-0.02, 0.2, -0.05);
-  logo.add(logoHalo); logo.add(wordmark); logo.add(emblem);
-
-  /* =====================================================================
-     6. Layout: panglica urmărește elementul .hero-stage din pagină
-     ===================================================================== */
-  var MODEL_W = 4.15, MODEL_H = 3.66, FIT = 0.8;   /* FIT < 1: obiectul lasă aer în jurul lui */
-  var vw = 1, vh = 1, stageRect = null, heroH = 800, pxPerUnit = 100;
-  function ppu() { return vh / (2 * CAM_Z * Math.tan(FOV * Math.PI / 360)); }
+  const MODEL_W = 5.35, MODEL_H = 3.4, FIT = 0.98;
+  let vw = 1, vh = 1, stageRect = null, pxPerUnit = 100, compactMode = false;
+  const ppu = () => vh / (2 * CAM_Z * Math.tan(FOV * Math.PI / 360));
   function resize() {
     vw = window.innerWidth; vh = window.innerHeight;
     applyPixelRatio();
     renderer.setSize(vw, vh, false);
-    pGeo.setDrawRange(0, vw <= 900 ? 850 : N);
+    pGeo.setDrawRange(0, vw <= 900 ? Math.min(N, 800) : N);
     camera.aspect = vw / vh; camera.updateProjectionMatrix();
     pMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
-    var hero = document.getElementById('hero');
-    heroH = hero ? hero.offsetHeight : vh;
+  }
+  function applyLayout(compact) {
+    compactMode = compact;
+    CARDS.forEach(cd => {
+      cd.base.set(cd.pos[0] * (compact ? 0.64 : 1), cd.pos[1] * (compact ? 1.04 : 1), cd.pos[2]);
+    });
   }
   function placeRoot() {
-    if (!stage) { ribbonRoot.visible = false; return false; }
-    var r = stage.getBoundingClientRect();
+    if (!stage) { hero.visible = false; return false; }
+    const r = stage.getBoundingClientRect();
     stageRect = r;
-    if (r.width < 10 || r.height < 10) { ribbonRoot.visible = false; return false; }
-    var k = ppu();
-    ribbonRoot.position.set((r.left + r.width / 2 - vw / 2) / k, -(r.top + r.height / 2 - vh / 2) / k, 0);
-    var s = Math.min(r.width / MODEL_W, r.height / MODEL_H) * (r.width < 520 ? 0.94 : FIT);   /* pe telefon umple scena */
+    if (r.width < 10 || r.height < 10) { hero.visible = false; return false; }
+    const k = ppu();
+    const compact = r.width < 560;
+    if (compact !== compactMode) applyLayout(compact);
+    const mw = compact ? 4.0 : MODEL_W;
+    hero.position.set((r.left + r.width / 2 - vw / 2) / k, -(r.top + r.height / 2 - vh / 2) / k, 0);
+    const s = Math.min(r.width / mw, r.height / MODEL_H) * (compact ? 1.0 : FIT);
     pxPerUnit = s;
-    ribbonRoot.scale.setScalar(s / k);
+    hero.scale.setScalar(s / k);
     return true;
   }
-  window.addEventListener('resize', function () { resize(); placeRoot(); maybeRedraw(); if (reduceMotion) frame(); });
+  window.addEventListener('resize', () => { resize(); placeRoot(); if (reduceMotion) frame(); });
   resize();
-
-  var fontsLoaded = false;
-  function maybeRedraw() {
-    if (!fontsLoaded) return;
-    var want = pxPerUnit < 118;
-    if (want !== compactMode) drawAll(want);
-  }
+  applyLayout(false);
 
   /* ---------- interacțiune ---------- */
-  var mouse = { x: 0, y: 0 }, smooth = { x: 0, y: 0 };
-  var pointer = { x: -9999, y: -9999, fine: false };
-  window.addEventListener('pointermove', function (e) {
+  const mouse = { x: 0, y: 0 }, smooth = { x: 0, y: 0 };
+  const pointer = { x: -9999, y: -9999, fine: false };
+  window.addEventListener('pointermove', e => {
     pointer.x = e.clientX; pointer.y = e.clientY; pointer.fine = e.pointerType !== 'touch';
     if (e.pointerType === 'touch') return;
     mouse.x = (e.clientX / vw) * 2 - 1;
     mouse.y = -((e.clientY / vh) * 2 - 1);
   }, { passive: true });
-  var raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function pickAt(x, y) {
-    if (!stageRect || x < stageRect.left || x > stageRect.right || y < stageRect.top || y > stageRect.bottom) return -1;
+    if (!stageRect) return -1;
+    const mx = stageRect.width * 0.14, my = stageRect.height * 0.14;
+    if (x < stageRect.left - mx || x > stageRect.right + mx || y < stageRect.top - my || y > stageRect.bottom + my) return -1;
     ndc.set((x / vw) * 2 - 1, -(y / vh) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    var hit = raycaster.intersectObjects(hitMeshes, false);
-    return hit.length ? hit[0].object.userData.panel : -1;
+    const hit = raycaster.intersectObjects(hitMeshes, false);
+    return hit.length ? hit[0].object.userData.card : -1;
   }
-  var hovered = -1, stageHover = 0, pulseT = 0, spinT = 1, hoverYaw = 0, hoverPitch = 0;
-  var spinAxis = new THREE.Vector3(0, 1, 0);
+  const clock = new THREE.Clock();
+  let hovered = -1, stageHover = 0, activeIdx = 0, cycleAt = 0;
+  function setModule(i, byUser) {
+    const cd = CARDS[i];
+    if (dash) {
+      let id = cd.id;
+      if (cd.alt && activeIdx === i) id = dash.getModule() === cd.id ? cd.alt : cd.id;
+      dash.setModule(id);
+    }
+    activeIdx = i;
+    cycleAt = clock.elapsedTime + (byUser ? 9 : 5.5);
+  }
   function setHover(i) {
     if (i === hovered) return;
     hovered = i;
-    var api = window.mdy && window.mdy.cursor;
-    if (api) { if (i >= 0) api.set('Soluții'); else api.clear(); }
+    const api = window.mdy && window.mdy.cursor;
+    if (api) { if (i >= 0) api.set('Vezi soluția'); else api.clear(); }
     if (stage) stage.style.cursor = i >= 0 ? 'pointer' : '';
+    if (i >= 0) setModule(i, true);
   }
   if (stage) {
-    stage.addEventListener('click', function (e) {
-      if (pickAt(e.clientX, e.clientY) >= 0) { if (window.mdy && window.mdy.scrollTo) window.mdy.scrollTo('#solutii'); }
-      else if (spinT >= 1 && !reduceMotion && stageRect) {
-        /* click pe spațiul liber: o rotire completă care „împinge” punctul apăsat în spate,
-           deci sensul depinde de locul click-ului (dreapta, stânga, sus, jos, diagonale) */
-        var ux = ((e.clientX - stageRect.left) / stageRect.width) * 2 - 1;
-        var uy = -(((e.clientY - stageRect.top) / stageRect.height) * 2 - 1);
-        var len = Math.sqrt(ux * ux + uy * uy);
-        if (len < 0.08) { ux = 1; uy = 0; len = 1; }
-        spinAxis.set(-uy / len, ux / len, 0);
-        spinT = 0;
-      }
+    stage.addEventListener('click', e => {
+      const i = pickAt(e.clientX, e.clientY);
+      if (i < 0) { setModule((activeIdx + 1) % CARDS.length, true); return; }
+      setModule(i, true);
+      const svc = document.querySelector('.svc-card[data-svc="' + CARDS[i].svc + '"]');
+      if (window.mdy && window.mdy.scrollTo) window.mdy.scrollTo('#solutii');
+      if (svc && !svc.classList.contains('is-active')) setTimeout(() => svc.click(), 350);
     });
-    stage.addEventListener('pointerleave', function () { setHover(-1); });
+    stage.addEventListener('pointerleave', () => setHover(-1));
   }
 
   /* =====================================================================
-     7. Pornire: fonturi -> texturi -> intro
+     8. Pornire: fonturi -> texturi -> intro
      ===================================================================== */
-  var clock = new THREE.Clock();
-  var introStart = -1;
+  let introStart = -1, fontsLoaded = false;
+  function redrawLabels() {
+    CARDS.forEach(cd => { cd.labelMat.map.image = drawLabel(cd, LBL_W, LBL_H); cd.labelMat.map.needsUpdate = true; });
+  }
   function begin() {
     if (fontsLoaded) return;
     fontsLoaded = true;
+    redrawLabels();
     placeRoot();
-    drawAll(pxPerUnit < 118);
     if (introStart < 0) introStart = clock.getElapsedTime();
+    cycleAt = introStart + 6.5;
     if (reduceMotion) frame();
   }
   if (document.fonts && document.fonts.load) {
     Promise.all([
       document.fonts.load('700 40px "Barlow Condensed"'),
-      document.fonts.load('800 40px "Barlow Condensed"'),
-      document.fonts.load('400 20px Inter'),
-      document.fonts.load('600 20px Inter')
+      document.fonts.load('600 40px "Barlow Condensed"'),
+      document.fonts.load('500 20px Inter'),
+      document.fonts.load('400 20px Inter')
     ]).then(begin, begin);
-    document.fonts.ready.then(function () { if (fontsLoaded) drawAll(compactMode); });
+    document.fonts.ready.then(() => { if (fontsLoaded) redrawLabels(); });
   } else {
     begin();
   }
   setTimeout(begin, 2200);
 
   /* =====================================================================
-     8. Buclă
+     9. Buclă
      ===================================================================== */
-  var pageFade = reduceMotion ? 1 : 0;
+  let pageFade = reduceMotion ? 1 : 0, gFade = 1;
   function frame() {
-    var dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+    const dt = Math.min(clock.getDelta(), 0.05);
+    let t = clock.elapsedTime;
     if (reduceMotion) t = 12;
     if (pageFade < 1) pageFade = Math.min(1, pageFade + dt * 0.7);
-    var damp = 1 - Math.exp(-4.0 * dt);          /* netezire independentă de rata de cadre */
+    const damp = 1 - Math.exp(-3.6 * dt);          /* netezire independentă de rata de cadre */
     smooth.x += (mouse.x - smooth.x) * damp;
     smooth.y += (mouse.y - smooth.y) * damp;
-    var sy = window.scrollY || window.pageYOffset || 0;
+    const sy = window.scrollY || window.pageYOffset || 0;
 
     pMat.uniforms.uTime.value = t;
     pMat.uniforms.uScroll.value = sy * 0.0022;
     pMat.uniforms.uOpacity.value = pageFade;
 
-    /* progresul coregrafiei depinde de poziția obiectului pe ecran, nu de scroll-ul paginii:
-       pe telefon obiectul stă jos în hero și trebuie să fie intact când ajungi la el */
-    var placed = placeRoot(), p = 0;
+    /* coregrafia depinde de poziția scenei pe ecran, nu de scroll-ul paginii */
+    const placed = placeRoot();
+    let p = 0;
     if (placed && stageRect) {
-      var cyS = stageRect.top + stageRect.height / 2;
+      const cyS = stageRect.top + stageRect.height / 2;
       p = clamp((vh * 0.5 - cyS) / (vh * 0.5 + stageRect.height * 0.5), 0, 1);
     }
-    var pe = p * p * (3 - 2 * p);
-    var visible = placed && p < 0.999;
-    ribbonRoot.visible = visible;
+    const pe = p * p * (3 - 2 * p);
+    const visible = placed && p < 0.999;
+    hero.visible = visible;
     if (visible) {
-      var it = introStart < 0 ? 0 : (reduceMotion ? 99 : t - introStart);
-      var rev = easeInOut(clamp((it - 0.1) / 2.0, 0, 1));
-      var fade = 1 - smooth01(0.4, 0.95, p);
+      const it = introStart < 0 ? 0 : (reduceMotion ? 99 : t - introStart);
+      const fade = 1 - smooth01(0.35, 0.92, p);
       gFade = fade;
-      ribbonMat.uniforms.uTime.value = t; haloMat.uniforms.uTime.value = t;
-      ribbonMat.uniforms.uReveal.value = introStart < 0 ? 0 : rev * 1.001;
-      haloMat.uniforms.uReveal.value = ribbonMat.uniforms.uReveal.value;
-      ribbonMat.uniforms.uFade.value = fade; haloMat.uniforms.uFade.value = fade;
-      backGlow.material.opacity = 0.32 * easeOut(clamp(it / 2.2, 0, 1)) * fade;
 
-      /* înclinare: mouse + respirație + coregrafie la scroll */
-      /* mișcare continuă, vizibilă, dar cu textul mereu lizibil */
-      var inStage = pointer.fine && stageRect && pointer.x >= stageRect.left && pointer.x <= stageRect.right && pointer.y >= stageRect.top && pointer.y <= stageRect.bottom;
+      /* dashboard viu + rotirea automată a modulelor când nimeni nu interacționează */
+      if (dash && dash.tick(performance.now())) screenTex.needsUpdate = true;
+      if (!reduceMotion && it > 3 && t > cycleAt && hovered < 0) {
+        const ac = CARDS[activeIdx];
+        if (ac.alt && dash && dash.getModule() === ac.id) setModule(activeIdx, false);
+        else setModule((activeIdx + 1) % CARDS.length, false);
+      }
+
+      /* intro: ecranul urcă și se aprinde, modulele sosesc pe rând, fluxurile se desenează */
+      const sIn = easeOut(clamp(it / 1.3, 0, 1));
+      const screenOn = easeInOut(clamp((it - 0.55) / 0.95, 0, 1));
+      slab.scale.setScalar(0.94 + 0.06 * sIn);
+      slab.position.y = (1 - sIn) * -0.25;
+      bodyMat.opacity = sIn * fade;
+      screenMat.color.setScalar(screenOn * (0.15 + 0.85 * fade));
+      coverMat.opacity = screenOn * fade * 0.9;
+      backGlow.material.opacity = backGlow.userData.base * screenOn * fade;
+      pool.material.opacity = pool.userData.base * screenOn * fade;
+      warm.material.opacity = warm.userData.base * sIn * fade;
+
+      const inStage = pointer.fine && stageRect && pointer.x >= stageRect.left && pointer.x <= stageRect.right && pointer.y >= stageRect.top && pointer.y <= stageRect.bottom;
       stageHover += ((inStage && p < 0.2 ? 1 : 0) - stageHover) * damp;
-      pulseT += dt * (1 + 1.2 * stageHover);          /* impulsurile de pe margini accelerează ușor sub mouse */
-      ribbonMat.uniforms.uPulseT.value = pulseT; haloMat.uniforms.uPulseT.value = pulseT;
-      var hd = (hovered >= 0 && PANELS[hovered].dir) ? PANELS[hovered].dir : null;
-      hoverYaw += ((hd ? hd.x * 0.14 : 0) - hoverYaw) * damp;      /* panoul de sub cursor înclină discret obiectul */
-      hoverPitch += ((hd ? -hd.y * 0.09 : 0) - hoverPitch) * damp;
-      if (spinT < 1) spinT = Math.min(1, spinT + dt / 1.15);
-      spinGroup.quaternion.setFromAxisAngle(spinAxis, Math.PI * 2 * easeInOut(spinT));
-      /* răspuns calm la mouse: maximum ~12° de rotație, restul e mișcare proprie, lentă */
-      var gain = 0.13 + 0.05 * stageHover;
-      var idleY = reduceMotion ? 0 : Math.sin(t * 0.3) * 0.1 + Math.sin(t * 0.11 + 2.0) * 0.04;
-      var idleX = reduceMotion ? 0 : Math.sin(t * 0.25 + 1.0) * 0.04;
-      tilt.rotation.y = smooth.x * gain * 1.5 + idleY + hoverYaw - pe * 0.6;
-      tilt.rotation.x = -smooth.y * gain + idleX + hoverPitch + pe * 0.85;
-      tilt.rotation.z = reduceMotion ? 0 : Math.sin(t * 0.18) * 0.018 + smooth.x * 0.015;
-      tilt.position.y = reduceMotion ? 0 : Math.sin(t * 0.55) * 0.045;
-      tilt.position.z = -pe * 0.6 + stageHover * 0.05;
-      tilt.scale.setScalar(reduceMotion ? 1 : 1 + Math.sin(t * 0.7) * 0.01 + stageHover * 0.012);
 
-      /* hover pe panouri */
-      if (pointer.fine && it > 2.4 && p < 0.2) { scene.updateMatrixWorld(); setHover(pickAt(pointer.x, pointer.y)); }
+      /* mișcare proprie lentă (mai multe frecvențe, fără ritm vizibil) + răspuns calm la mouse */
+      const idleY = reduceMotion ? 0 : Math.sin(t * 0.21) * 0.05 + Math.sin(t * 0.083 + 1.7) * 0.03;
+      const idleX = reduceMotion ? 0 : Math.sin(t * 0.17 + 0.6) * 0.025 + Math.sin(t * 0.061 + 2.4) * 0.012;
+      const gain = 0.09 + 0.03 * stageHover;
+      tilt.rotation.y = smooth.x * gain + idleY - pe * 0.35;
+      tilt.rotation.x = -smooth.y * gain * 0.6 + idleX + pe * 0.55;
+      tilt.rotation.z = reduceMotion ? 0 : Math.sin(t * 0.14) * 0.008;
+      tilt.position.y = (reduceMotion ? 0 : Math.sin(t * 0.47) * 0.035) - pe * 0.4;
+      tilt.position.z = -pe * 1.4 + stageHover * 0.04;
+
+      /* hover pe module */
+      if (pointer.fine && it > 2.2 && p < 0.2) { scene.updateMatrixWorld(); setHover(pickAt(pointer.x, pointer.y)); }
       else if (hovered >= 0) setHover(-1);
 
-      /* logo */
-      var lt = clamp((it - 1.0) / 0.8, 0, 1);
-      var logoOn = logoReady >= 2 ? 1 : 0;
-      emblemMat.uniforms.uOpacity.value = logoOn * clamp(lt * 1.6, 0, 1) * fade;
-      wordMat.uniforms.uOpacity.value = logoOn * fade;
-      wordMat.uniforms.uReveal.value = easeOut(clamp((it - 1.35) / 0.8, 0, 1));
-      emblemMat.uniforms.uReveal.value = 1;
-      emblemMat.uniforms.uTime.value = t; wordMat.uniforms.uTime.value = t + 0.4;
-      emblem.scale.setScalar(0.6 + 0.4 * easeBack(lt));
-      emblem.rotation.y = reduceMotion ? 0 : Math.sin(t * 0.7) * 0.22;
-      logoHalo.material.opacity = (0.28 + 0.1 * Math.sin(t * 1.4)) * lt * fade;
-      logo.position.z = 0.2 + pe * 0.9;
-
-      /* panouri: text + iconițe */
-      for (var q = 0; q < PANELS.length; q++) {
-        var pn = PANELS[q];
-        var tt = clamp((it - 1.45 - q * 0.2) / 0.85, 0, 1);
-        pn.mat.uniforms.uReveal.value = fontsLoaded ? easeOut(tt) : 0;
-        pn.mat.uniforms.uFade.value = fade;
-        pn.hover = lerp(pn.hover, hovered === q ? 1 : 0, 0.12);
-        var ic = clamp((it - 1.3 - q * 0.2) / 0.95, 0, 1);
-        var ib = pn.icon.userData.base;
-        pn.icon.scale.setScalar(Math.max(0.0001, ib.s * (compactMode ? 1.3 : 1) * easeBack(ic) * (1 + pn.hover * 0.07)));
-        pn.icon.position.z = RB.zOn(pn.cfg, ib.x, ib.y) + 0.34 + pn.hover * 0.07;
-        pn.icon.rotation.y = (q === 1 ? 0.3 : -0.32) + (reduceMotion ? 0 : Math.sin(t * 0.55 + q * 2.1) * 0.16 + stageHover * Math.sin(t * 1.4 + q) * 0.08) + pn.hover * 0.14;
-        pn.icon.userData.update(t, Math.max(pn.hover, stageHover * 0.4));
-        var d = pn.dir || { x: 0, y: 0 };
-        pn.group.position.set(d.x * pe * 1.1, d.y * pe * 1.1, pn.hover * 0.06 + pe * 0.7);
+      /* modulele: plutire individuală, paralaxă după adâncime, evidențiere */
+      for (let i = 0; i < CARDS.length; i++) {
+        const cd = CARDS[i];
+        const cIn = easeOut(clamp((it - 0.9 - i * 0.13) / 0.9, 0, 1));
+        cd.hover = lerp(cd.hover, hovered === i ? 1 : 0, damp * 2.2);
+        cd.active = lerp(cd.active, activeIdx === i ? 1 : 0, damp * 1.6);
+        const fx = reduceMotion ? 0 : Math.sin(t * 0.6 + cd.phase) * 0.035;
+        const fz = reduceMotion ? 0 : Math.sin(t * 0.45 + cd.phase * 1.3) * 0.03;
+        const depth = cd.base.z / 0.84;
+        const spread = 1 + pe * 0.55 + (1 - cIn) * 0.5;
+        cd.group.position.set(
+          cd.base.x * spread + smooth.x * 0.05 * depth,
+          cd.base.y * spread + fx + smooth.y * 0.03 * depth + (1 - cIn) * -0.2,
+          cd.base.z + fz + cd.hover * 0.14 + cd.active * 0.05 + pe * 0.4
+        );
+        cd.group.rotation.y = cd.yaw + smooth.x * 0.04 + (reduceMotion ? 0 : Math.sin(t * 0.33 + cd.phase) * 0.03) - cd.hover * 0.06 * Math.sign(cd.yaw || 1);
+        cd.group.rotation.x = (reduceMotion ? 0 : Math.sin(t * 0.29 + cd.phase * 0.7) * 0.025) + cd.hover * 0.03;
+        const sc = (compactMode ? 0.84 : 1) * (0.9 + 0.1 * easeBack(cIn)) * (1 + cd.hover * 0.06 + cd.active * 0.02);
+        cd.group.scale.setScalar(Math.max(0.0001, sc));
+        const cf = cIn * fade;
+        cd.mat.opacity = 0.88 * cf;
+        cd.mat.sheen = 0.4 + cd.hover * 0.6;
+        cd.labelMat.opacity = cf * (0.86 + 0.14 * Math.max(cd.hover, cd.active));
+        cd.bar.material.opacity = cf * (0.15 + 0.85 * Math.max(cd.hover, cd.active * (0.55 + 0.25 * Math.sin(t * 2.2))));
+        cd.icon.userData.update(t, Math.max(cd.hover, cd.active * 0.6, stageHover * 0.3));
+        cd.icon.rotation.y = (reduceMotion ? 0 : Math.sin(t * 0.5 + cd.phase) * 0.12) + cd.hover * 0.2;
+        cd.icon.position.y = 0.01 + (reduceMotion ? 0 : Math.sin(t * 0.9 + cd.phase) * 0.012);
+        const st = cd.stream.uniforms;
+        st.uTime.value = t; st.uFade.value = fade;
+        st.uReveal.value = easeInOut(clamp((it - 1.5 - i * 0.1) / 1.1, 0, 1));
+        st.uBoost.value = Math.max(cd.hover, cd.active * 0.8);
       }
-      for (q = 0; q < iconMats.length; q++) iconMats[q].opacity = fade * (iconMats[q] === lineMat ? 0.85 : (iconMats[q] === M.glass ? 0.92 : 1));
-      ribbonMat.uniforms.uHover.value.set(PANELS[0].hover, PANELS[1].hover, PANELS[2].hover);
+      for (const m of iconMats) m.opacity = fade * (m === M.glass ? 0.92 : 1);
+
+      syncReflections(fade);
     }
 
-    camera.position.x += (smooth.x * 0.16 - camera.position.x) * 0.05;
-    camera.position.y += (smooth.y * 0.1 - camera.position.y) * 0.05;
+    camera.position.x += (smooth.x * 0.14 - camera.position.x) * 0.05;
+    camera.position.y += (smooth.y * 0.09 - camera.position.y) * 0.05;
     camera.lookAt(0, 0, 0);
     renderer.render(scene, camera);
   }
 
   /* ---------- ciclul de viață al buclei ---------- */
-  var lost = false, samples = 0, slowTime = 0, lastNow = 0;
+  let lost = false, samples = 0, slowTime = 0, lastNow = 0;
   function tick(now) {
-    var delta = lastNow ? (now - lastNow) / 1000 : 1 / 60;
+    const delta = lastNow ? (now - lastNow) / 1000 : 1 / 60;
     lastNow = now;
     frame();
     /* rezoluție adaptivă: doar după 120 de cadre lente consecutive, fără oscilații */
@@ -990,31 +683,30 @@
     renderer.setAnimationLoop(tick);
   }
   document.addEventListener('visibilitychange', syncLoop);
-  window.addEventListener('scroll', function () { if (reduceMotion && !lost) frame(); }, { passive: true });
-  loader.manager.onLoad = function () { if (reduceMotion && !lost) frame(); };
-  var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  if (motionQuery.addEventListener) motionQuery.addEventListener('change', function (e) { reduceMotion = e.matches; syncLoop(); });
-  canvas.addEventListener('webglcontextlost', function (e) {
+  window.addEventListener('scroll', () => { if (reduceMotion && !lost) frame(); }, { passive: true });
+  const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+  if (motionQuery.addEventListener) motionQuery.addEventListener('change', e => { reduceMotion = e.matches; syncLoop(); });
+  canvas.addEventListener('webglcontextlost', e => {
     e.preventDefault();
     lost = true;
-    root.classList.remove('has-webgl'); root.classList.add('no-webgl');
+    noGL();
     syncLoop();
   });
-  canvas.addEventListener('webglcontextrestored', function () {
+  canvas.addEventListener('webglcontextrestored', () => {
     lost = false;
     resize(); placeRoot();
-    if (fontsLoaded) drawAll(compactMode);
     root.classList.remove('no-webgl'); root.classList.add('has-webgl');
     syncLoop();
   });
 
   /* cârlig de depanare: oprește/pornește bucla (util pentru capturi de ecran) */
   window.mdyScene = {
-    stop: function () { renderer.setAnimationLoop(null); },
+    stop: () => renderer.setAnimationLoop(null),
     start: syncLoop,
     render: frame,
-    spin: function () { return { axis: spinAxis.toArray(), t: spinT }; },
-    info: function () { return { pxPerUnit: pxPerUnit, compact: compactMode, stage: stageRect && [stageRect.left, stageRect.top, stageRect.width, stageRect.height], root: ribbonRoot.position.toArray(), scale: ribbonRoot.scale.x, pr: renderer.getPixelRatio(), vw: vw, vh: vh }; }
+    capture: pr => { renderer.setPixelRatio(pr); renderer.setSize(vw, vh, false); frame(); const p = new Promise(r => canvas.toBlob(r, 'image/png')); applyPixelRatio(); renderer.setSize(vw, vh, false); return p; },
+    setModule: i => setModule(typeof i === 'number' ? i : Math.max(0, CARDS.findIndex(c => c.id === i)), true),
+    info: () => ({ pxPerUnit, compact: compactMode, active: CARDS[activeIdx].id, hovered, stage: stageRect && [stageRect.left, stageRect.top, stageRect.width, stageRect.height], root: hero.position.toArray(), scale: hero.scale.x, pr: renderer.getPixelRatio(), vw, vh, dash: !!dash })
   };
 
   syncLoop();

@@ -16,6 +16,15 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-15 — feedback: calmer mouse response, gentle self-motion
+
+- User: the object moved too much when the mouse came near; wanted some 3D
+  motion of its own, but little.
+- Pointer yaw gain 0.30–0.55 → 0.13–0.18 (about 12° max), hovered-panel pull
+  0.42/0.26 → 0.14/0.09, stage-hover push/scale and icon hover effects roughly
+  halved, camera parallax halved, damping slowed to 4/s. Idle sway 0.16 → 0.10,
+  float 0.06 → 0.045, breathing 1.2% → 1%. The full spin on empty-stage click stays.
+
 ### 2026-09-15 — feedback: panel text must read better
 
 - User: "e super", but the writing on the 3D panels was hard to read; asked for

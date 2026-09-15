@@ -859,7 +859,7 @@
     var dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
     if (reduceMotion) t = 12;
     if (pageFade < 1) pageFade = Math.min(1, pageFade + dt * 0.7);
-    var damp = 1 - Math.exp(-5.5 * dt);          /* netezire independentă de rata de cadre */
+    var damp = 1 - Math.exp(-4.0 * dt);          /* netezire independentă de rata de cadre */
     smooth.x += (mouse.x - smooth.x) * damp;
     smooth.y += (mouse.y - smooth.y) * damp;
     var sy = window.scrollY || window.pageYOffset || 0;
@@ -886,22 +886,23 @@
       /* mișcare continuă, vizibilă, dar cu textul mereu lizibil */
       var inStage = pointer.fine && stageRect && pointer.x >= stageRect.left && pointer.x <= stageRect.right && pointer.y >= stageRect.top && pointer.y <= stageRect.bottom;
       stageHover += ((inStage && p < 0.2 ? 1 : 0) - stageHover) * damp;
-      pulseT += dt * (1 + 2.2 * stageHover);          /* impulsurile de pe margini accelerează sub mouse */
+      pulseT += dt * (1 + 1.2 * stageHover);          /* impulsurile de pe margini accelerează ușor sub mouse */
       ribbonMat.uniforms.uPulseT.value = pulseT; haloMat.uniforms.uPulseT.value = pulseT;
       var hd = (hovered >= 0 && PANELS[hovered].dir) ? PANELS[hovered].dir : null;
-      hoverYaw += ((hd ? hd.x * 0.42 : 0) - hoverYaw) * damp;      /* panoul de sub cursor trage obiectul spre el */
-      hoverPitch += ((hd ? -hd.y * 0.26 : 0) - hoverPitch) * damp;
+      hoverYaw += ((hd ? hd.x * 0.14 : 0) - hoverYaw) * damp;      /* panoul de sub cursor înclină discret obiectul */
+      hoverPitch += ((hd ? -hd.y * 0.09 : 0) - hoverPitch) * damp;
       if (spinT < 1) spinT = Math.min(1, spinT + dt / 1.15);
       var spin = Math.PI * 2 * easeInOut(spinT);
-      var gain = 0.3 + 0.25 * stageHover;             /* mouse-ul întoarce obiectul mai mult când e deasupra lui */
-      var idleY = reduceMotion ? 0 : Math.sin(t * 0.3) * 0.16 + Math.sin(t * 0.11 + 2.0) * 0.06;
-      var idleX = reduceMotion ? 0 : Math.sin(t * 0.25 + 1.0) * 0.06;
-      tilt.rotation.y = smooth.x * gain * 1.6 + idleY + hoverYaw + spin - pe * 0.6;
+      /* răspuns calm la mouse: maximum ~12° de rotație, restul e mișcare proprie, lentă */
+      var gain = 0.13 + 0.05 * stageHover;
+      var idleY = reduceMotion ? 0 : Math.sin(t * 0.3) * 0.1 + Math.sin(t * 0.11 + 2.0) * 0.04;
+      var idleX = reduceMotion ? 0 : Math.sin(t * 0.25 + 1.0) * 0.04;
+      tilt.rotation.y = smooth.x * gain * 1.5 + idleY + hoverYaw + spin - pe * 0.6;
       tilt.rotation.x = -smooth.y * gain + idleX + hoverPitch + pe * 0.85;
-      tilt.rotation.z = reduceMotion ? 0 : Math.sin(t * 0.18) * 0.025 + smooth.x * 0.03;
-      tilt.position.y = reduceMotion ? 0 : Math.sin(t * 0.55) * 0.06;
-      tilt.position.z = -pe * 0.6 + stageHover * 0.12;
-      tilt.scale.setScalar(reduceMotion ? 1 : 1 + Math.sin(t * 0.7) * 0.012 + stageHover * 0.03);
+      tilt.rotation.z = reduceMotion ? 0 : Math.sin(t * 0.18) * 0.018 + smooth.x * 0.015;
+      tilt.position.y = reduceMotion ? 0 : Math.sin(t * 0.55) * 0.045;
+      tilt.position.z = -pe * 0.6 + stageHover * 0.05;
+      tilt.scale.setScalar(reduceMotion ? 1 : 1 + Math.sin(t * 0.7) * 0.01 + stageHover * 0.012);
 
       /* hover pe panouri */
       if (pointer.fine && it > 2.4 && p < 0.2) { scene.updateMatrixWorld(); setHover(pickAt(pointer.x, pointer.y)); }
@@ -929,19 +930,19 @@
         pn.hover = lerp(pn.hover, hovered === q ? 1 : 0, 0.12);
         var ic = clamp((it - 1.3 - q * 0.2) / 0.95, 0, 1);
         var ib = pn.icon.userData.base;
-        pn.icon.scale.setScalar(Math.max(0.0001, ib.s * easeBack(ic) * (1 + pn.hover * 0.12)));
-        pn.icon.position.z = RB.zOn(pn.cfg, ib.x, ib.y) + 0.34 + pn.hover * 0.12;
-        pn.icon.rotation.y = (q === 1 ? 0.3 : -0.32) + (reduceMotion ? 0 : Math.sin(t * 0.55 + q * 2.1) * 0.22 + stageHover * Math.sin(t * 1.4 + q) * 0.15) + pn.hover * 0.25;
-        pn.icon.userData.update(t, Math.max(pn.hover, stageHover * 0.6));
+        pn.icon.scale.setScalar(Math.max(0.0001, ib.s * easeBack(ic) * (1 + pn.hover * 0.07)));
+        pn.icon.position.z = RB.zOn(pn.cfg, ib.x, ib.y) + 0.34 + pn.hover * 0.07;
+        pn.icon.rotation.y = (q === 1 ? 0.3 : -0.32) + (reduceMotion ? 0 : Math.sin(t * 0.55 + q * 2.1) * 0.16 + stageHover * Math.sin(t * 1.4 + q) * 0.08) + pn.hover * 0.14;
+        pn.icon.userData.update(t, Math.max(pn.hover, stageHover * 0.4));
         var d = pn.dir || { x: 0, y: 0 };
-        pn.group.position.set(d.x * pe * 1.1, d.y * pe * 1.1, pn.hover * 0.1 + pe * 0.7);
+        pn.group.position.set(d.x * pe * 1.1, d.y * pe * 1.1, pn.hover * 0.06 + pe * 0.7);
       }
       for (q = 0; q < iconMats.length; q++) iconMats[q].opacity = fade * (iconMats[q] === lineMat ? 0.85 : (iconMats[q] === M.glass ? 0.92 : 1));
       ribbonMat.uniforms.uHover.value.set(PANELS[0].hover, PANELS[1].hover, PANELS[2].hover);
     }
 
-    camera.position.x += (smooth.x * 0.3 - camera.position.x) * 0.05;
-    camera.position.y += (smooth.y * 0.18 - camera.position.y) * 0.05;
+    camera.position.x += (smooth.x * 0.16 - camera.position.x) * 0.05;
+    camera.position.y += (smooth.y * 0.1 - camera.position.y) * 0.05;
     camera.lookAt(0, 0, 0);
     renderer.render(scene, camera);
   }

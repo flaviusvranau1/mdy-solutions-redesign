@@ -79,25 +79,25 @@
   <section class="hero" id="hero">
     <div class="container hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow hero-eyebrow">Digitalizare completă</p>
+        <p class="eyebrow hero-eyebrow">Centrul de comandă al afacerii tale</p>
         <h1>
           <span class="h1-line"><span class="h1-inner">Software integrat.</span></span>
           <span class="h1-line"><span class="h1-inner">Procese clare.</span></span>
           <span class="h1-line"><span class="h1-inner text-gradient">Rezultate măsurabile.</span></span>
         </h1>
-        <p class="lead hero-lead">Conectăm operațiunile, vânzările, logistica și analiza într-un ecosistem modern, construit pentru eficiență și decizii rapide.</p>
+        <p class="lead hero-lead">ERP, producție, curierat și analiză într-un singur sistem, pe infrastructură administrată și securizată de MDY: date în timp real, servere stabile, riscuri sub control.</p>
         <div class="hero-actions">
-          <a class="btn btn-primary btn-lg magnetic" href="#solutii" data-cursor="Soluții">Vezi soluțiile <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
-          <a class="btn btn-ghost btn-lg magnetic" href="#contact">Discută cu un specialist</a>
+          <a class="btn btn-primary btn-lg magnetic" href="#solutii" data-cursor="Soluții">Explorează modulele <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn-ghost btn-lg magnetic" href="#contact">Programează un demo</a>
         </div>
         <ul class="hero-meta">
-          <li>Sute de implementări în industrii diverse</li>
-          <li>Echipe specializate pe fiecare zonă</li>
-          <li>Suport local și know-how aplicat</li>
+          <li>Date în timp real</li>
+          <li>Monitorizare 24/7</li>
+          <li>Backup și recuperare testate</li>
         </ul>
       </div>
-      <div class="hero-stage" role="img" aria-label="Ecosistemul MDY în 3D: Soluții Software (ERP, CRM, WMS, portale), Arhitectură și Integrare (cloud, API, securitate, infrastructură), Date și Tehnologie (BI, AI, automatizare, monitoring)">
-        <img class="hero-fallback" src="assets/img/mdy-ecosistem.webp" width="960" height="655" alt="" loading="lazy">
+      <div class="hero-stage" role="img" aria-label="Centrul de comandă MDY în 3D: un ecran cu dashboard-ul ERP viu și șase module în jurul lui — ERP operațional, Producție și MES, Curierat și Depozit, BI și Analytics, Infrastructură și Cloud, Cyber Security">
+        <img class="hero-fallback" src="assets/img/hero-poster.webp" width="1200" height="922" alt="" loading="lazy">
       </div>
     </div>
     <div class="hero-scroll" aria-hidden="true"><i></i>Scroll</div>
@@ -618,12 +618,24 @@
   </div>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* fără WebGL2 sau fără module ES: posterul static ia locul scenei; la fel dacă scena nu pornește în 8 s */
+(function () {
+  var h = document.documentElement, ok = false;
+  try { var c = document.createElement('canvas'); ok = !!(window.WebGL2RenderingContext && c.getContext('webgl2')); } catch (e) { ok = false; }
+  if (!ok || !('noModule' in HTMLScriptElement.prototype)) h.classList.add('no-webgl');
+  else setTimeout(function () { if (!h.classList.contains('has-webgl')) h.classList.add('no-webgl'); }, 8000);
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
 <script src="main.js"></script>
-<script src="scene.js"></script>
+<script src="dashboard.js"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/" } }
+</script>
+<script type="module" src="scene.js"></script>
 </body>
 </html>

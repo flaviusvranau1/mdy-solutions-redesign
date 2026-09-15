@@ -16,6 +16,20 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-15 — feedback: panel text must read better
+
+- User: "e super", but the writing on the 3D panels was hard to read; asked for
+  whiter/bigger text or any other fix.
+- Titles 0.17 → 0.19 units at weight 800 in pure white; descriptions 0.07 → 0.078
+  at Inter 500 in near-white; pills 0.054 → 0.058 at 700 with a darker fill.
+  Every glyph gets a dark rounded outline (6–9% of its size) plus the drop shadow.
+- A dark translucent glass plate (parallelogram following the band direction,
+  42% ink, thin aqua rim) now sits under each text block so the copy no longer
+  competes with the bright cyan gradient. Panel anchors and icon sizes were
+  nudged so the taller blocks stay inside the flat regions of the ribbon.
+- Checked in the in-app browser at 1440×900: all three panels readable, no
+  console errors.
+
 ### 2026-09-15 — feedback: smaller, clearer, more dynamic hero
 
 - User feedback on the 3D ecosystem: too big, parts felt rigid, wanted more

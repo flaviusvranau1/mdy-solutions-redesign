@@ -539,32 +539,33 @@
 
   var PANELS = [
     { title: ['Soluții', 'Software'], desc: 'Dezvoltăm și implementăm soluții software adaptate nevoilor tale.', tags: ['ERP', 'CRM', 'WMS', 'Portale'],
-      cfg: 0, x: -1.05, top: 0.98, slant: -0.577, descW: 0.94, cols: 2, icon: { x: -0.55, y: 1.36, s: 0.5, build: iconSoftware } },
+      cfg: 0, x: -1.05, top: 1.0, slant: -0.577, descW: 0.98, cols: 2, icon: { x: -0.55, y: 1.4, s: 0.46, build: iconSoftware } },
     { title: ['Arhitectură', '& Integrare'], desc: 'Conectăm sisteme, procese și echipe pentru un ecosistem unitar și sigur.', tags: ['Cloud', 'API', 'Securitate', 'Infrastructură'],
-      cfg: 1, x: 0.2, top: 0.84, slant: 0.577, descW: 0.92, cols: 2, icon: { x: 0.63, y: 1.2, s: 0.46, build: iconArch } },
+      cfg: 1, x: 0.2, top: 0.86, slant: 0.577, descW: 0.94, cols: 2, icon: { x: 0.63, y: 1.24, s: 0.43, build: iconArch } },
     { title: ['Date &', 'Tehnologie'], desc: 'Transformăm datele în decizii inteligente și rezultate reale.', tags: ['BI & Analytics', 'AI', 'Automatizare', 'Monitoring'],
-      cfg: 2, x: -0.42, top: -0.55, slant: 0, descW: 1.34, cols: 4, tagsX: -1.28, icon: { x: -0.95, y: -0.9, s: 0.48, build: iconData } }
+      cfg: 2, x: -0.42, top: -0.52, slant: 0, descW: 1.42, cols: 4, tagsX: -1.26, icon: { x: -0.95, y: -0.9, s: 0.46, build: iconData } }
   ];
 
   function layoutPanel(pn, compact) {
-    var ops = [], y = pn.top, S = compact ? 0.21 : 0.17;
+    /* text mai mare, mai alb și mai gros decât în imaginea originală, pentru lizibilitate */
+    var ops = [], y = pn.top, S = compact ? 0.23 : 0.19;
     function xAt(yy) { return pn.x + pn.slant * (pn.top - yy); }
-    var tf = font(700, S, FAM_T);
+    var tf = font(800, S, FAM_T);
     pn.title.forEach(function (line) {
-      ops.push({ t: 'text', font: tf, text: line.toUpperCase(), x: xAt(y - S * 0.5), y: y - S * 0.82, size: S, color: '#f3fbff' });
-      y -= S * 0.95;
+      ops.push({ t: 'text', font: tf, text: line.toUpperCase(), x: xAt(y - S * 0.5), y: y - S * 0.82, size: S, color: '#ffffff', stroke: 0.06 });
+      y -= S * 0.93;
     });
-    y -= 0.04;
-    ops.push({ t: 'bar', x: xAt(y), y: y, w: compact ? 0.42 : 0.36, h: 0.014 });
-    y -= 0.07;
+    y -= 0.03;
+    ops.push({ t: 'bar', x: xAt(y), y: y, w: compact ? 0.44 : 0.4, h: 0.016 });
+    y -= 0.065;
     if (!compact) {
-      var df = font(400, 0.07, FAM_B);
+      var DS = 0.078, df = font(500, DS, FAM_B);
       wrap(df, pn.desc, pn.descW).forEach(function (line) {
-        ops.push({ t: 'text', font: df, text: line, x: xAt(y - 0.05), y: y - 0.068, size: 0.07, color: 'rgba(228,245,252,0.95)' });
-        y -= 0.1;
+        ops.push({ t: 'text', font: df, text: line, x: xAt(y - DS * 0.7), y: y - DS * 0.95, size: DS, color: '#f6fcff', stroke: 0.09 });
+        y -= DS * 1.32;
       });
-      y -= 0.05;
-      var gf = font(600, 0.054, FAM_B), padX = 0.05, ph = 0.112, gap = 0.035;
+      y -= 0.04;
+      var gf = font(700, 0.058, FAM_B), padX = 0.055, ph = 0.12, gap = 0.035;
       var widths = pn.tags.map(function (tg) { return tw(gf, tg) + padX * 2; });
       if (pn.cols === 2) {
         var c0 = Math.max(widths[0], widths[2]), c1 = Math.max(widths[1], widths[3]);
@@ -586,6 +587,7 @@
       b.minX = Math.min(b.minX, o.x); b.maxX = Math.max(b.maxX, o.x + w); b.maxY = Math.max(b.maxY, top); b.minY = Math.min(b.minY, bot);
     });
     b.ops = ops;
+    b.xAt = xAt;
     return b;
   }
 
@@ -635,7 +637,7 @@
   });
 
   function drawPanel(pn, compact) {
-    var lay = layoutPanel(pn, compact), pad = 0.06;
+    var lay = layoutPanel(pn, compact), pad = 0.1;
     var bw = lay.maxX - lay.minX + pad * 2, bh = lay.maxY - lay.minY + pad * 2;
     var cw = 64, ch = 64;
     while (cw < bw * U && cw < 2048) cw *= 2;
@@ -646,11 +648,32 @@
     var ox = lay.minX - pad, oy = lay.maxY + pad;
     function X(x) { return (x - ox) * U; }
     function Y(y) { return (oy - y) * U; }
+    /* plăcuță de sticlă întunecată sub tot blocul (paralelogram pe direcția benzii) */
+    var relL = 1e9, relR = -1e9;
+    lay.ops.forEach(function (o) {
+      var w = o.t === 'text' ? tw(o.font, o.text) : o.w, base = lay.xAt(o.y);
+      relL = Math.min(relL, o.x - base); relR = Math.max(relR, o.x + w - base);
+    });
+    var pp = 0.055, yT = lay.maxY + pp, yB = lay.minY - pp;
+    var poly = [[lay.xAt(yT) + relL - pp, yT], [lay.xAt(yT) + relR + pp, yT], [lay.xAt(yB) + relR + pp, yB], [lay.xAt(yB) + relL - pp, yB]];
+    g.save();
+    g.beginPath();
+    poly.forEach(function (pt, i) { if (i) g.lineTo(X(pt[0]), Y(pt[1])); else g.moveTo(X(pt[0]), Y(pt[1])); });
+    g.closePath();
+    g.lineJoin = 'round';
+    g.fillStyle = 'rgba(3, 14, 34, 0.42)'; g.strokeStyle = 'rgba(3, 14, 34, 0.42)'; g.lineWidth = 0.05 * U;
+    g.shadowColor = 'rgba(0, 0, 0, 0.35)'; g.shadowBlur = 0.03 * U; g.shadowOffsetY = 0.01 * U;
+    g.stroke(); g.shadowColor = 'transparent'; g.fill();
+    g.strokeStyle = 'rgba(143, 247, 247, 0.2)'; g.lineWidth = 0.004 * U; g.stroke();
+    g.restore();
     lay.ops.forEach(function (o) {
       g.save();
       if (o.t === 'text') {
-        g.font = o.font; g.fillStyle = o.color; g.textBaseline = 'alphabetic';
-        g.shadowColor = 'rgba(2, 12, 30, 0.8)'; g.shadowBlur = 0.036 * U; g.shadowOffsetY = 0.007 * U;
+        g.font = o.font; g.textBaseline = 'alphabetic'; g.lineJoin = 'round';
+        g.strokeStyle = 'rgba(2, 10, 26, 0.6)'; g.lineWidth = o.size * (o.stroke || 0.08) * U;
+        g.strokeText(o.text, X(o.x), Y(o.y));
+        g.fillStyle = o.color;
+        g.shadowColor = 'rgba(2, 12, 30, 0.85)'; g.shadowBlur = 0.03 * U; g.shadowOffsetY = 0.006 * U;
         g.fillText(o.text, X(o.x), Y(o.y));
       } else if (o.t === 'bar') {
         var grd = g.createLinearGradient(X(o.x), 0, X(o.x + o.w), 0);
@@ -660,10 +683,10 @@
       } else {
         var px = X(o.x), py = Y(o.y), pw = o.w * U, phh = o.h * U;
         roundRectPath(g, px, py, pw, phh, phh / 2);
-        g.fillStyle = 'rgba(5, 24, 58, 0.6)'; g.fill();
-        g.lineWidth = Math.max(2, 0.0065 * U); g.strokeStyle = 'rgba(143,247,247,0.8)';
+        g.fillStyle = 'rgba(4, 20, 48, 0.74)'; g.fill();
+        g.lineWidth = Math.max(2, 0.007 * U); g.strokeStyle = 'rgba(143,247,247,0.92)';
         g.shadowColor = 'rgba(42,220,229,0.85)'; g.shadowBlur = 0.022 * U; g.stroke();
-        g.shadowBlur = 0; g.font = o.font; g.fillStyle = '#ecffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.shadowBlur = 0; g.font = o.font; g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText(o.text, px + pw / 2, py + phh / 2 + 0.004 * U);
       }
       g.restore();

@@ -38,7 +38,7 @@
     mid: [[1825, 495.6], [2116, 469.1], [2116, 805.8], [1825, 810.2]],
     small: [[2170, 533], [2312, 526.4], [2312, 765.8], [2170, 766.9]]
   };
-  var VIDEO_MAP = { top: -4.7, height: 1543.7 };           /* cadrul video în unități de imagine (potrivit pe 12 muchii, 2 cadre) */
+  var VIDEO_MAP = { top: (IH - IW * 9 / 16) / 2, height: IW * 9 / 16 };   /* video 16:9 = aceeași imagine scalată uniform (confirmat prin comparație de cadre) */
   var FIELD = { cx: 1890, left: 1350, right: 2430, ringY: 1296, ringRx: 548, ringRy: 48 };
 
   /* omografie: pătratul unitate -> patrulater (pentru matrix3d) */
@@ -70,13 +70,17 @@
   function layout() {
     var pw = plate.clientWidth, ph = plate.clientHeight;
     if (!pw || !ph) return;
-    var compact = matchMedia('(max-width: 900px)').matches, s, ox, oy;
+    var compact = COMPACT_MQ.matches, s, ox, oy;
     if (!compact) {
       var pr = plate.getBoundingClientRect(), cr = copy ? copy.getBoundingClientRect() : { right: pr.left + pw * 0.45 };
-      var paneL = Math.max(cr.right - pr.left + 44, pw * 0.47);
+      var copyR = cr.right - pr.left, paneL = Math.max(copyR + 44, pw * 0.47);
       s = Math.min((pw - 18 - paneL) / (2330 - 1229), ph / 1230);
+      /* fotografia umple toată înălțimea hero-ului dacă asta mărește scena cu cel mult 15% */
+      s = Math.max(s, Math.min(ph / IH, s * 1.15));
+      if (paneL + 1101 * s > pw - 12) paneL = Math.max(copyR + 20, pw - 12 - 1101 * s);
       ox = paneL - 1229 * s;
       oy = ph / 2 - 760 * s;
+      if (IH * s >= ph) oy = Math.min(0, Math.max(ph - IH * s, oy));
     } else {
       s = Math.min(pw / 1150, ph / 1280);
       ox = pw / 2 - 1770 * s;
@@ -101,6 +105,8 @@
     if (!running && bootAt >= 0) renderStatic();
   }
   function toPlate(p) { return [L.ox + p[0] * L.s, L.oy + p[1] * L.s]; }
+  /* aceeași regulă ca în CSS: telefon sau tabletă ținută vertical = scena sub text */
+  var COMPACT_MQ = matchMedia('(max-width: 900px), (max-width: 1180px) and (orientation: portrait)');
 
   /* =====================================================================
      Ecranele holografice (canvas 2D, text crocant, fixate pe sticla din imagine)

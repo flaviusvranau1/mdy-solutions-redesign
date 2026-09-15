@@ -46,6 +46,12 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
   - reduced motion: no video, static frame; hidden tab / off-screen hero: loop and
     video paused. Debug: `mdyHero.info()`, `mdyHero.attack('up'|'low')`.
 - Removed `scene.js`, `dashboard.js`, the Three.js importmap and the old poster.
+- Review workflow (4 dimensions, each finding checked by 2 skeptics, 62 agents): 13
+  confirmed findings, all fixed: low-power GPU hint, fps cap and cached glass/glow,
+  highp shader + no pow() on negative bases, WebGL context-loss recovery, pause and
+  "Simulează un atac" buttons (WCAG 2.2.2), reduced motion stops the video, visible
+  "DEMO LIVE" label, plate always covers tall heroes, tablet portrait stacks like
+  mobile, video mapped as plain 16:9 scaling (top −6, height 1548 image px).
 - Verified with 2x headless Chrome captures at 1920×1080, 1440×900, 1280×800 and in
   the Browser pane at 375×812; no console errors.
 

@@ -16,6 +16,19 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-15 — feedback: scrolling should feel "mega smooth"
+
+- Removed the two effects that made every scrolled frame expensive: the
+  `backdrop-filter: blur(14px)` on every `.card` (with animated WebGL particles
+  behind, each visible card re-blurred its backdrop every frame) and the
+  `mix-blend-mode: overlay` on the fixed full-screen grain layer (forces the whole
+  page to recomposite per frame). Cards now use a slightly more opaque navy
+  gradient that still reads as glass; the grain is a plain 3.5% texture. Blur
+  stays only on small, transient surfaces (nav pill, cursor label, toast, mobile menu).
+- Lenis: lerp 0.09 → 0.072 and wheelMultiplier 0.95 for a longer, softer glide.
+  Desktop pixel-ratio cap 1.65 → 1.5 to trim GPU fill.
+- Verified: no console errors, cards legible over the particle field.
+
 ### 2026-09-15 — feedback: the 3D hero looked broken on phones
 
 - User: on mobile it looked awful and strange. Cause: the scroll choreography

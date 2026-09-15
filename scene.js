@@ -22,7 +22,7 @@
   var quality = 1;                 /* scade la 0.8 doar după randare lentă susținută */
   function applyPixelRatio() {
     var compactVp = window.innerWidth <= 900;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compactVp ? 2 : 1.65,
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compactVp ? 2 : 1.5,
       Math.sqrt(2400000 / Math.max(1, window.innerWidth * window.innerHeight))) * quality);
   }
   applyPixelRatio();

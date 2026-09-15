@@ -65,8 +65,8 @@ html.has-webgl #scene { opacity: 1; }
 .bg-glow.a { width: 60vw; height: 60vw; left: -25vw; top: 40vh; background: radial-gradient(circle, rgba(25, 203, 211, 0.3), transparent 65%); }
 .bg-glow.b { width: 50vw; height: 50vw; right: -20vw; top: 110vh; background: radial-gradient(circle, rgba(143, 247, 247, 0.2), transparent 65%); }
 .grain {
-  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0.028;
-  mix-blend-mode: overlay;
+  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0.035;
+  /* fără mix-blend-mode: un strat fix cu blend peste tot ecranul forța recompunerea întregii pagini la fiecare cadru */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   /* textură statică: nu repictează un strat de zgomot animat la scroll */
 }
@@ -127,7 +127,7 @@ p { margin: 0; }
 .btn:hover svg { transform: translateX(4px); }
 .btn-primary { background: linear-gradient(135deg, var(--glow) 0%, var(--accent) 60%, var(--accent-2) 100%); color: #04131c; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 12px 40px -12px rgba(25, 203, 211, 0.75); }
 .btn-primary:hover { color: #04131c; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 18px 56px -12px rgba(25, 203, 211, 1); }
-.btn-ghost { border-color: var(--line-2); background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); }
+.btn-ghost { border-color: var(--line-2); background: rgba(8, 22, 38, 0.45); }
 .btn-ghost:hover { border-color: rgba(143, 247, 247, 0.6); color: #fff; background: rgba(143, 247, 247, 0.06); }
 .btn-signal { background: var(--signal); color: #1a1205; box-shadow: 0 12px 40px -12px rgba(255, 180, 84, 0.7); }
 .btn-signal:hover { color: #1a1205; box-shadow: 0 18px 56px -12px rgba(255, 180, 84, 0.95); background: #ffc470; }
@@ -186,8 +186,9 @@ html.no-webgl .hero-fallback { display: block; }
 /* ---------- carduri glass cu tilt 3D ---------- */
 .card {
   position: relative; border-radius: var(--radius); border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  /* „sticlă” fără backdrop-filter: blur-ul se recalcula la fiecare cadru peste particulele animate
+     din spate, pentru fiecare card vizibil, și făcea scroll-ul să sacadeze */
+  background: linear-gradient(180deg, rgba(14, 34, 56, 0.66), rgba(8, 22, 38, 0.6));
   box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.9);
 }
 .card::before {
@@ -262,7 +263,7 @@ html.no-webgl .hero-fallback { display: block; }
 .products { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
 .product { --pad: clamp(24px, 2.6vw, 36px); display: flex; flex-direction: column; gap: 22px; padding: var(--pad); }
 .product .card-media { margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 0; aspect-ratio: 16 / 6.4; }
-.product .card-media .chip { position: absolute; left: var(--pad); bottom: 16px; z-index: 2; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.product .card-media .chip { position: absolute; left: var(--pad); bottom: 16px; z-index: 2; background: rgba(5, 24, 40, 0.75); }
 .product-head h3 { font-size: clamp(1.8rem, 2.5vw, 2.3rem); line-height: 1; }
 .product-head p { margin-top: 12px; color: var(--muted); font-size: 0.94rem; }
 .product-demo { border-radius: 16px; border: 1px solid var(--line-2); background: linear-gradient(180deg, rgba(5, 17, 29, 0.7), rgba(10, 26, 43, 0.6)); padding: 18px 20px; display: grid; gap: 16px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }

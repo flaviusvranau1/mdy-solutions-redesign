@@ -22,7 +22,7 @@
   var quality = 1;                 /* scade la 0.8 doar după randare lentă susținută */
   function applyPixelRatio() {
     var compactVp = window.innerWidth <= 900;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compactVp ? 1.35 : 1.65,
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compactVp ? 2 : 1.65,
       Math.sqrt(2400000 / Math.max(1, window.innerWidth * window.innerHeight))) * quality);
   }
   applyPixelRatio();
@@ -549,7 +549,7 @@
 
   function layoutPanel(pn, compact) {
     /* text mai mare, mai alb și mai gros decât în imaginea originală, pentru lizibilitate */
-    var ops = [], y = pn.top, S = compact ? 0.23 : 0.19;
+    var ops = [], y = pn.top, S = compact ? 0.3 : 0.19;   /* pe telefon: doar titluri, mari */
     function xAt(yy) { return pn.x + pn.slant * (pn.top - yy); }
     var tf = font(800, S, FAM_T);
     pn.title.forEach(function (line) {
@@ -557,7 +557,7 @@
       y -= S * 0.93;
     });
     y -= 0.03;
-    ops.push({ t: 'bar', x: xAt(y), y: y, w: compact ? 0.44 : 0.4, h: 0.016 });
+    ops.push({ t: 'bar', x: xAt(y), y: y, w: compact ? 0.56 : 0.4, h: compact ? 0.022 : 0.016 });
     y -= 0.065;
     if (!compact) {
       var DS = 0.078, df = font(500, DS, FAM_B);
@@ -778,7 +778,7 @@
     if (r.width < 10 || r.height < 10) { ribbonRoot.visible = false; return false; }
     var k = ppu();
     ribbonRoot.position.set((r.left + r.width / 2 - vw / 2) / k, -(r.top + r.height / 2 - vh / 2) / k, 0);
-    var s = Math.min(r.width / MODEL_W, r.height / MODEL_H) * FIT;
+    var s = Math.min(r.width / MODEL_W, r.height / MODEL_H) * (r.width < 520 ? 0.94 : FIT);   /* pe telefon umple scena */
     pxPerUnit = s;
     ribbonRoot.scale.setScalar(s / k);
     return true;
@@ -879,8 +879,15 @@
     pMat.uniforms.uScroll.value = sy * 0.0022;
     pMat.uniforms.uOpacity.value = pageFade;
 
-    var p = clamp(sy / (heroH * 0.8), 0, 1), pe = p * p * (3 - 2 * p);
-    var visible = placeRoot() && p < 0.999;
+    /* progresul coregrafiei depinde de poziția obiectului pe ecran, nu de scroll-ul paginii:
+       pe telefon obiectul stă jos în hero și trebuie să fie intact când ajungi la el */
+    var placed = placeRoot(), p = 0;
+    if (placed && stageRect) {
+      var cyS = stageRect.top + stageRect.height / 2;
+      p = clamp((vh * 0.5 - cyS) / (vh * 0.5 + stageRect.height * 0.5), 0, 1);
+    }
+    var pe = p * p * (3 - 2 * p);
+    var visible = placed && p < 0.999;
     ribbonRoot.visible = visible;
     if (visible) {
       var it = introStart < 0 ? 0 : (reduceMotion ? 99 : t - introStart);
@@ -941,7 +948,7 @@
         pn.hover = lerp(pn.hover, hovered === q ? 1 : 0, 0.12);
         var ic = clamp((it - 1.3 - q * 0.2) / 0.95, 0, 1);
         var ib = pn.icon.userData.base;
-        pn.icon.scale.setScalar(Math.max(0.0001, ib.s * easeBack(ic) * (1 + pn.hover * 0.07)));
+        pn.icon.scale.setScalar(Math.max(0.0001, ib.s * (compactMode ? 1.3 : 1) * easeBack(ic) * (1 + pn.hover * 0.07)));
         pn.icon.position.z = RB.zOn(pn.cfg, ib.x, ib.y) + 0.34 + pn.hover * 0.07;
         pn.icon.rotation.y = (q === 1 ? 0.3 : -0.32) + (reduceMotion ? 0 : Math.sin(t * 0.55 + q * 2.1) * 0.16 + stageHover * Math.sin(t * 1.4 + q) * 0.08) + pn.hover * 0.14;
         pn.icon.userData.update(t, Math.max(pn.hover, stageHover * 0.4));
@@ -1006,7 +1013,8 @@
     stop: function () { renderer.setAnimationLoop(null); },
     start: syncLoop,
     render: frame,
-    spin: function () { return { axis: spinAxis.toArray(), t: spinT }; }
+    spin: function () { return { axis: spinAxis.toArray(), t: spinT }; },
+    info: function () { return { pxPerUnit: pxPerUnit, compact: compactMode, stage: stageRect && [stageRect.left, stageRect.top, stageRect.width, stageRect.height], root: ribbonRoot.position.toArray(), scale: ribbonRoot.scale.x, pr: renderer.getPixelRatio(), vw: vw, vh: vh }; }
   };
 
   syncLoop();

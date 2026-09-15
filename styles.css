@@ -418,7 +418,7 @@ html.no-webgl .hero-fallback { display: block; }
   html.menu-open .nav-right .btn { display: none; }
   .hero { min-height: 0; padding-top: 128px; }
   .hero-grid { grid-template-columns: 1fr; gap: 8px; }
-  .hero-stage { width: 100%; margin: 10px 0 0; aspect-ratio: 1.12; }
+  .hero-stage { width: calc(100% + 2 * var(--gutter)); margin: 4px calc(-1 * var(--gutter)) 0; aspect-ratio: 1.02; }
   .hero-scroll { display: none; }
   .pillars { grid-template-columns: 1fr; }
   .pillar { border-left: 0; border-top: 1px solid var(--line); }

@@ -15,7 +15,7 @@
   /* ---------- scroll lin (Lenis) ---------- */
   var lenis = null;
   if (window.Lenis && !reduce) {
-    lenis = new window.Lenis({ lerp: 0.09, smoothWheel: true, syncTouch: false });
+    lenis = new window.Lenis({ lerp: 0.072, smoothWheel: true, wheelMultiplier: 0.95, syncTouch: false });   /* lerp mai mic = alunecare mai catifelată */
     if (G && ST) {
       lenis.on('scroll', ST.update);
       G.ticker.add(function (t) { lenis.raf(t * 1000); });

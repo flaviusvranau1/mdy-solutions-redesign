@@ -311,9 +311,10 @@
 
   /* ---------- ierarhie: root (poziționat pe .hero-stage) > tilt > content ---------- */
   var ribbonRoot = new THREE.Group();
+  var spinGroup = new THREE.Group();   /* rotirea la click, în jurul unei axe din planul ecranului */
   var tilt = new THREE.Group();
   var content = new THREE.Group();
-  ribbonRoot.add(tilt); tilt.add(content);
+  ribbonRoot.add(spinGroup); spinGroup.add(tilt); tilt.add(content);
   content.position.y = -0.2;
   scene.add(ribbonRoot);
   var ribbonMesh = new THREE.Mesh(ribbonGeometry(coarse ? 640 : 900, coarse ? 18 : 24), ribbonMat);
@@ -810,6 +811,7 @@
     return hit.length ? hit[0].object.userData.panel : -1;
   }
   var hovered = -1, stageHover = 0, pulseT = 0, spinT = 1, hoverYaw = 0, hoverPitch = 0;
+  var spinAxis = new THREE.Vector3(0, 1, 0);
   function setHover(i) {
     if (i === hovered) return;
     hovered = i;
@@ -820,7 +822,16 @@
   if (stage) {
     stage.addEventListener('click', function (e) {
       if (pickAt(e.clientX, e.clientY) >= 0) { if (window.mdy && window.mdy.scrollTo) window.mdy.scrollTo('#solutii'); }
-      else if (spinT >= 1 && !reduceMotion) spinT = 0;   /* click pe spațiul liber: o rotire completă */
+      else if (spinT >= 1 && !reduceMotion && stageRect) {
+        /* click pe spațiul liber: o rotire completă care „împinge” punctul apăsat în spate,
+           deci sensul depinde de locul click-ului (dreapta, stânga, sus, jos, diagonale) */
+        var ux = ((e.clientX - stageRect.left) / stageRect.width) * 2 - 1;
+        var uy = -(((e.clientY - stageRect.top) / stageRect.height) * 2 - 1);
+        var len = Math.sqrt(ux * ux + uy * uy);
+        if (len < 0.08) { ux = 1; uy = 0; len = 1; }
+        spinAxis.set(-uy / len, ux / len, 0);
+        spinT = 0;
+      }
     });
     stage.addEventListener('pointerleave', function () { setHover(-1); });
   }
@@ -892,12 +903,12 @@
       hoverYaw += ((hd ? hd.x * 0.14 : 0) - hoverYaw) * damp;      /* panoul de sub cursor înclină discret obiectul */
       hoverPitch += ((hd ? -hd.y * 0.09 : 0) - hoverPitch) * damp;
       if (spinT < 1) spinT = Math.min(1, spinT + dt / 1.15);
-      var spin = Math.PI * 2 * easeInOut(spinT);
+      spinGroup.quaternion.setFromAxisAngle(spinAxis, Math.PI * 2 * easeInOut(spinT));
       /* răspuns calm la mouse: maximum ~12° de rotație, restul e mișcare proprie, lentă */
       var gain = 0.13 + 0.05 * stageHover;
       var idleY = reduceMotion ? 0 : Math.sin(t * 0.3) * 0.1 + Math.sin(t * 0.11 + 2.0) * 0.04;
       var idleX = reduceMotion ? 0 : Math.sin(t * 0.25 + 1.0) * 0.04;
-      tilt.rotation.y = smooth.x * gain * 1.5 + idleY + hoverYaw + spin - pe * 0.6;
+      tilt.rotation.y = smooth.x * gain * 1.5 + idleY + hoverYaw - pe * 0.6;
       tilt.rotation.x = -smooth.y * gain + idleX + hoverPitch + pe * 0.85;
       tilt.rotation.z = reduceMotion ? 0 : Math.sin(t * 0.18) * 0.018 + smooth.x * 0.015;
       tilt.position.y = reduceMotion ? 0 : Math.sin(t * 0.55) * 0.045;
@@ -994,7 +1005,8 @@
   window.mdyScene = {
     stop: function () { renderer.setAnimationLoop(null); },
     start: syncLoop,
-    render: frame
+    render: frame,
+    spin: function () { return { axis: spinAxis.toArray(), t: spinT }; }
   };
 
   syncLoop();

@@ -16,6 +16,17 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-15 — feedback: click spin must follow the click position
+
+- User: clicking in different places always spun the object the same way;
+  it should turn toward where you clicked.
+- The spin is now a quaternion on a new `spinGroup` above `tilt`: the axis lies in
+  the screen plane, perpendicular to the click offset from the stage centre, so the
+  clicked point is pushed away from the viewer (right → yaw right, left → yaw left,
+  top → pitch back, corners → diagonal). Clicks near the centre default to a yaw.
+- Verified by dispatching clicks at four stage positions: axes (0,1,0), (0,-1,0),
+  (-1,0,0), (0.71,0.71,0); each spin completes and returns to identity.
+
 ### 2026-09-15 — feedback: calmer mouse response, gentle self-motion
 
 - User: the object moved too much when the mouse came near; wanted some 3D

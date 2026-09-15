@@ -16,6 +16,22 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-15 — feedback: the 3D hero looked broken on phones
+
+- User: on mobile it looked awful and strange. Cause: the scroll choreography
+  (dithered dissolve, tilt-back, panels drifting apart) was driven by page
+  scrollY over the hero height. On phones the stage sits at the bottom of a
+  ~1050 px hero, so by the time it scrolled into view it was already half
+  dissolved with its panels detached.
+- Progress is now derived from the stage's own position in the viewport
+  (0 while its centre is at or below mid-screen, 1 once it has left the top),
+  which is identical on desktop and correct on phones.
+- Phone tuning: stage bleeds to the viewport edges at aspect 1.02, object fills
+  94% of it, pixel-ratio cap 2 on compact viewports, compact panels show only
+  the titles at 0.3 units with a wider bar, icons 1.3× larger.
+- Verified at 375×812 in the in-app browser: ribbon intact and centred when
+  scrolled into view, titles readable, no horizontal overflow, no console errors.
+
 ### 2026-09-15 — feedback: click spin must follow the click position
 
 - User: clicking in different places always spun the object the same way;

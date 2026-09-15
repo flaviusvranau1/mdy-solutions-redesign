@@ -30,6 +30,10 @@
     if (lenis) lenis.scrollTo(el, { offset: -72, duration: 1.3 });
     else el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }
+  /* API mică folosită de scena 3D (click pe panouri, eticheta cursorului) */
+  window.mdy = window.mdy || {};
+  window.mdy.scrollTo = function (target) { scrollToEl(typeof target === 'string' ? document.querySelector(target) : target); };
+  window.mdy.cursor = { set: function () {}, clear: function () {} };
 
   /* ---------- navigare ---------- */
   var nav = document.querySelector('.nav');
@@ -74,6 +78,10 @@
     cur.innerHTML = '<div class="cursor-dot"></div><div class="cursor-ring"><span class="cursor-label"></span></div>';
     document.body.appendChild(cur);
     var dot = cur.children[0], ring = cur.children[1], label = ring.children[0];
+    window.mdy.cursor = {
+      set: function (text) { cur.classList.add('is-hover'); if (text) { label.textContent = text; cur.classList.add('has-label'); } },
+      clear: function () { cur.classList.remove('is-hover'); cur.classList.remove('has-label'); label.textContent = ''; }
+    };
     var mx = -100, my = -100, rx = -100, ry = -100, shown = false, cursorFrame = 0, cursorTime = 0;
     function cursorLoop(time) {
       cursorFrame = 0;
@@ -147,6 +155,8 @@
         currentX += (targetX - currentX) * blend; currentY += (targetY - currentY) * blend;
         card.style.setProperty('--mx', mx.toFixed(2) + '%'); card.style.setProperty('--my', my.toFixed(2) + '%');
         card.style.setProperty('--rx', currentX.toFixed(3) + 'deg'); card.style.setProperty('--ry', currentY.toFixed(3) + 'deg');
+        /* parallax în poza cardului, legat de înclinarea netezită */
+        card.style.setProperty('--px', (currentY / max).toFixed(3)); card.style.setProperty('--py', (-currentX / max).toFixed(3));
         if (Math.abs(targetX - currentX) + Math.abs(targetY - currentY) > 0.008) tiltFrame = requestAnimationFrame(drawTilt);
         else { tiltTime = 0; if (!active) card.classList.remove('is-tilting'); }
       }

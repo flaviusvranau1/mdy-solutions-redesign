@@ -16,6 +16,19 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-15 — feedback: smaller, clearer, more dynamic hero
+
+- User feedback on the 3D ecosystem: too big, parts felt rigid, wanted more
+  motion and a stronger hover response ("să se mai învârtă").
+- Object now fits at 80% of the stage (`FIT`), the stage bleed shrank from 7vw
+  to 3vw and the hero grid is 1:1, so the ribbon has air around it.
+- Motion: larger continuous sway/float and a slow breathing scale; pointer yaw
+  gain rises from 0.3 to 0.55 while the cursor is over the stage; the hovered
+  panel pulls the object toward itself (yaw ±0.42, pitch ±0.26); edge pulses
+  and icon animations run up to 3× faster under the cursor; a click on empty
+  stage space does one full eased spin (1.15 s); a click on a panel still
+  scrolls to Soluții. Damping stays frame-rate independent.
+
 ### 2026-09-15 — MDY feedback: 3D ecosystem hero, client photos, client fonts
 
 - Client (MDY) feedback relayed by the user: replace the globe with their hexagon

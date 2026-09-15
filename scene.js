@@ -216,7 +216,7 @@
 
   var ribbonMat = new THREE.ShaderMaterial({
     uniforms: {
-      uTime: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 1 },
+      uTime: { value: 0 }, uPulseT: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 1 },
       uHover: { value: new THREE.Vector3() }, uDots: { value: Math.floor(RB.L * 16) }
     },
     vertexShader: [
@@ -231,7 +231,7 @@
       '}'
     ].join('\n'),
     fragmentShader: [
-      'uniform float uTime; uniform float uReveal; uniform float uFade; uniform vec3 uHover; uniform float uDots;',
+      'uniform float uTime; uniform float uPulseT; uniform float uReveal; uniform float uFade; uniform vec3 uHover; uniform float uDots;',
       'varying vec2 vUv; varying float vSeg; varying vec3 vN; varying vec3 vViewPos; varying vec3 vLocal;',
       'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }',
       /* 0 = Soluții Software (cyan), 1 = Arhitectură & Integrare (indigo), 2 = Date & Tehnologie (albastru regal) */
@@ -275,7 +275,7 @@
       '  float aa = fwidth(vUv.y);',
       '  float line = 1.0 - smoothstep(0.005, 0.005 + aa * 1.6, e);',
       '  float inner = exp(-e * 30.0);',
-      '  float ph = fract(vUv.x * 3.0 - uTime * 0.085);',
+      '  float ph = fract(vUv.x * 3.0 - uPulseT * 0.085);',
       '  float pulse = smoothstep(0.0, 0.012, ph) * (1.0 - smoothstep(0.012, 0.08, ph));',
       '  vec3 glowC = vec3(0.56, 0.97, 0.97);',
       '  col += glowC * inner * (0.26 + 1.35 * pulse + 0.4 * hov);',
@@ -289,18 +289,18 @@
     extensions: { derivatives: true }
   });
   var haloMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 1 } },
+    uniforms: { uTime: { value: 0 }, uPulseT: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 1 } },
     vertexShader: [
       'attribute float aGlow; attribute float aAlong;',
       'varying float vGlow; varying float vAlong;',
       'void main(){ vGlow = aGlow; vAlong = aAlong; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }'
     ].join('\n'),
     fragmentShader: [
-      'uniform float uTime; uniform float uReveal; uniform float uFade;',
+      'uniform float uTime; uniform float uPulseT; uniform float uReveal; uniform float uFade;',
       'varying float vGlow; varying float vAlong;',
       'void main(){',
       '  if (vAlong > uReveal) discard;',
-      '  float ph = fract(vAlong * 3.0 - uTime * 0.085);',
+      '  float ph = fract(vAlong * 3.0 - uPulseT * 0.085);',
       '  float pulse = smoothstep(0.0, 0.012, ph) * (1.0 - smoothstep(0.012, 0.08, ph));',
       '  float g = vGlow * vGlow;',
       '  gl_FragColor = vec4(vec3(0.42, 0.93, 1.0), g * (0.5 + pulse * 0.9) * uFade);',
@@ -734,7 +734,7 @@
   /* =====================================================================
      6. Layout: panglica urmărește elementul .hero-stage din pagină
      ===================================================================== */
-  var MODEL_W = 4.15, MODEL_H = 3.66;
+  var MODEL_W = 4.15, MODEL_H = 3.66, FIT = 0.8;   /* FIT < 1: obiectul lasă aer în jurul lui */
   var vw = 1, vh = 1, stageRect = null, heroH = 800, pxPerUnit = 100;
   function ppu() { return vh / (2 * CAM_Z * Math.tan(FOV * Math.PI / 360)); }
   function resize() {
@@ -754,7 +754,7 @@
     if (r.width < 10 || r.height < 10) { ribbonRoot.visible = false; return false; }
     var k = ppu();
     ribbonRoot.position.set((r.left + r.width / 2 - vw / 2) / k, -(r.top + r.height / 2 - vh / 2) / k, 0);
-    var s = Math.min(r.width / MODEL_W, r.height / MODEL_H);
+    var s = Math.min(r.width / MODEL_W, r.height / MODEL_H) * FIT;
     pxPerUnit = s;
     ribbonRoot.scale.setScalar(s / k);
     return true;
@@ -786,7 +786,7 @@
     var hit = raycaster.intersectObjects(hitMeshes, false);
     return hit.length ? hit[0].object.userData.panel : -1;
   }
-  var hovered = -1;
+  var hovered = -1, stageHover = 0, pulseT = 0, spinT = 1, hoverYaw = 0, hoverPitch = 0;
   function setHover(i) {
     if (i === hovered) return;
     hovered = i;
@@ -796,7 +796,8 @@
   }
   if (stage) {
     stage.addEventListener('click', function (e) {
-      if (pickAt(e.clientX, e.clientY) >= 0 && window.mdy && window.mdy.scrollTo) window.mdy.scrollTo('#solutii');
+      if (pickAt(e.clientX, e.clientY) >= 0) { if (window.mdy && window.mdy.scrollTo) window.mdy.scrollTo('#solutii'); }
+      else if (spinT >= 1 && !reduceMotion) spinT = 0;   /* click pe spațiul liber: o rotire completă */
     });
     stage.addEventListener('pointerleave', function () { setHover(-1); });
   }
@@ -835,7 +836,7 @@
     var dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
     if (reduceMotion) t = 12;
     if (pageFade < 1) pageFade = Math.min(1, pageFade + dt * 0.7);
-    var damp = 1 - Math.exp(-4.5 * dt);          /* netezire independentă de rata de cadre */
+    var damp = 1 - Math.exp(-5.5 * dt);          /* netezire independentă de rata de cadre */
     smooth.x += (mouse.x - smooth.x) * damp;
     smooth.y += (mouse.y - smooth.y) * damp;
     var sy = window.scrollY || window.pageYOffset || 0;
@@ -860,13 +861,24 @@
 
       /* înclinare: mouse + respirație + coregrafie la scroll */
       /* mișcare continuă, vizibilă, dar cu textul mereu lizibil */
-      var idleY = reduceMotion ? 0 : Math.sin(t * 0.3) * 0.12 + Math.sin(t * 0.11 + 2.0) * 0.05;
-      var idleX = reduceMotion ? 0 : Math.sin(t * 0.25 + 1.0) * 0.05;
-      tilt.rotation.y = smooth.x * 0.26 + idleY - pe * 0.6;
-      tilt.rotation.x = -smooth.y * 0.16 + idleX + pe * 0.85;
-      tilt.rotation.z = reduceMotion ? 0 : Math.sin(t * 0.18) * 0.02;
-      tilt.position.y = reduceMotion ? 0 : Math.sin(t * 0.55) * 0.05;
-      tilt.position.z = -pe * 0.6;
+      var inStage = pointer.fine && stageRect && pointer.x >= stageRect.left && pointer.x <= stageRect.right && pointer.y >= stageRect.top && pointer.y <= stageRect.bottom;
+      stageHover += ((inStage && p < 0.2 ? 1 : 0) - stageHover) * damp;
+      pulseT += dt * (1 + 2.2 * stageHover);          /* impulsurile de pe margini accelerează sub mouse */
+      ribbonMat.uniforms.uPulseT.value = pulseT; haloMat.uniforms.uPulseT.value = pulseT;
+      var hd = (hovered >= 0 && PANELS[hovered].dir) ? PANELS[hovered].dir : null;
+      hoverYaw += ((hd ? hd.x * 0.42 : 0) - hoverYaw) * damp;      /* panoul de sub cursor trage obiectul spre el */
+      hoverPitch += ((hd ? -hd.y * 0.26 : 0) - hoverPitch) * damp;
+      if (spinT < 1) spinT = Math.min(1, spinT + dt / 1.15);
+      var spin = Math.PI * 2 * easeInOut(spinT);
+      var gain = 0.3 + 0.25 * stageHover;             /* mouse-ul întoarce obiectul mai mult când e deasupra lui */
+      var idleY = reduceMotion ? 0 : Math.sin(t * 0.3) * 0.16 + Math.sin(t * 0.11 + 2.0) * 0.06;
+      var idleX = reduceMotion ? 0 : Math.sin(t * 0.25 + 1.0) * 0.06;
+      tilt.rotation.y = smooth.x * gain * 1.6 + idleY + hoverYaw + spin - pe * 0.6;
+      tilt.rotation.x = -smooth.y * gain + idleX + hoverPitch + pe * 0.85;
+      tilt.rotation.z = reduceMotion ? 0 : Math.sin(t * 0.18) * 0.025 + smooth.x * 0.03;
+      tilt.position.y = reduceMotion ? 0 : Math.sin(t * 0.55) * 0.06;
+      tilt.position.z = -pe * 0.6 + stageHover * 0.12;
+      tilt.scale.setScalar(reduceMotion ? 1 : 1 + Math.sin(t * 0.7) * 0.012 + stageHover * 0.03);
 
       /* hover pe panouri */
       if (pointer.fine && it > 2.4 && p < 0.2) { scene.updateMatrixWorld(); setHover(pickAt(pointer.x, pointer.y)); }
@@ -896,8 +908,8 @@
         var ib = pn.icon.userData.base;
         pn.icon.scale.setScalar(Math.max(0.0001, ib.s * easeBack(ic) * (1 + pn.hover * 0.12)));
         pn.icon.position.z = RB.zOn(pn.cfg, ib.x, ib.y) + 0.34 + pn.hover * 0.12;
-        pn.icon.rotation.y = (q === 1 ? 0.3 : -0.32) + (reduceMotion ? 0 : Math.sin(t * 0.55 + q * 2.1) * 0.22) + pn.hover * 0.25;
-        pn.icon.userData.update(t, pn.hover);
+        pn.icon.rotation.y = (q === 1 ? 0.3 : -0.32) + (reduceMotion ? 0 : Math.sin(t * 0.55 + q * 2.1) * 0.22 + stageHover * Math.sin(t * 1.4 + q) * 0.15) + pn.hover * 0.25;
+        pn.icon.userData.update(t, Math.max(pn.hover, stageHover * 0.6));
         var d = pn.dir || { x: 0, y: 0 };
         pn.group.position.set(d.x * pe * 1.1, d.y * pe * 1.1, pn.hover * 0.1 + pe * 0.7);
       }

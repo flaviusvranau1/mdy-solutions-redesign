@@ -16,6 +16,14 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-16 (4) — scenele din hero se schimbă mai des
+
+- Feedback: „dacă acum durează 9–10 secunde, să dureze doar 5–6”.
+- `hero.js`: `FIRST = 7000` (prima scenă, cât intră textul și pornesc ecranele), `DWELL = 6000`,
+  `AFTER_CLICK = 10000`; trecerea de ~1,75 s intră în aceste durate. Măsurat cu `diag-hero.js`:
+  schimbări la 7,2 s, 13,3 s, 19,5 s, 25,5 s, fără erori și fără sărituri de layout.
+  Ecosistemul (`zones.js`) a rămas la 8 s.
+
 ### 2026-09-16 (3) — hero-ul trece prin trei scene, fiecare cu textul ei
 
 - Feedback: „unde deschizi pagina e primul clip 3D cu atacurile pe server, fă ceva ca și

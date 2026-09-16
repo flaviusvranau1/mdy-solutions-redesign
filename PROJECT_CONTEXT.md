@@ -16,6 +16,42 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-16 (3) — hero-ul trece prin trei scene, fiecare cu textul ei
+
+- Feedback: „unde deschizi pagina e primul clip 3D cu atacurile pe server, fă ceva ca și
+  celelalte imagini să se schimbe [...] ideea e să modifici clipul de sus, să se schimbe,
+  tot cu text dacă trebuie, ca să apară chestii diferite”; plus „clipul de la Soluții
+  Software nu prea are sens”.
+- Scene: 01 Centru de comandă (placa WebGL existentă, textul din HTML rămâne neschimbat,
+  pentru SEO), 02 ERP & software, 03 Infrastructură & cloud. Prima stă 11 s, celelalte 9 s,
+  după un click pe tab 15 s. Trecerea e aceeași ca la ecosistem: scena veche se retrage în
+  adâncime (scale 0.9, blur, mai întunecată), cea nouă vine spre cameră.
+- Textul se schimbă odată cu scena: eyebrow, cele trei rânduri din h1 (ies în sus și intră de
+  jos, prin masca .h1-line, cu Web Animations API) și paragraful. Eyebrow-ul, h1-ul și
+  paragraful primesc min-height = cel mai înalt text dintre scene (măsurat cu clone
+  invizibile), deci butoanele și scena de pe telefon nu sar. Tot din clone se ia cea mai
+  lată margine dreaptă a textelor, ca scena să nu intre peste un text mai lung.
+- Media noi (Higgsfield, 20 de credite): două imagini nano_banana_pro 2K cu placa existentă
+  ca referință de stil (`assets/hero/erp-*.webp`, `cloud-*.webp`) și două bucle veo3_1_lite
+  de 8 s, 720p, start = end (`*-loop-1920.mp4` e scalat lanczos + unsharp, `*-loop-1280.mp4`
+  nativ). MiniMax H3 de 4 s a eșuat de două ori (fără cost); Veo Lite cu start+end acceptă
+  doar 8 s. Bucla 16:9 e puțin mai înaltă decât fotografia: `video.top ≈ -6`, `height ≈ 1548`.
+- Scena ERP are un ecran live (canvas 2D, matrix3d pe sticla măsurată cu `edgesq.js`):
+  comenzi azi, facturat azi, stoc, livrări la timp, vânzări pe 12 luni, planul de producție,
+  comenzi noi care intră la ~3–4 s (orașe, fără nume de firme). Sticla e mai opacă
+  (`dense`), ca dashboard-ul generat de dedesubt să nu se mai vadă. Pe telefon: variantă
+  compactă.
+- WebGL-ul, atacurile și ecranele primei scene rulează doar cât scena e vizibilă; video-urile
+  scenelor rulează doar cât se văd, iar scena următoare se preîncarcă. „Simulează un atac”
+  dintr-o altă scenă întâi revine la centrul de comandă. Tab-urile (jos, stânga) au bară de
+  progres, săgeți stânga/dreapta și pun rotația pe pauză cât stă mouse-ul pe ele.
+- Zona „Soluții Software” din ecosistem folosește acum bucla ERP (poster + 1280/854),
+  în locul ecranului abstract cu cod.
+- Unelte noi: `edgesq.js` (muchii înclinate), `shots-hero.js` (scenă așezată sau înghețată
+  la N ms), `diag-hero.js` (rotația naturală, sărituri de layout, video-uri). `shot.js`
+  afișează acum rezultatul scriptului extra (`EXTRA {...}`). În Chrome headless canvasul
+  WebGL nu apare sub un filtru CSS în timpul tranziției — e un artefact al capturii.
+
 ### 2026-09-16 (2) — trecerea dintre zone se face în adâncime
 
 - Feedback: „aș fi vrut ca imaginile să se schimbe dar să arate fain când se schimbă,

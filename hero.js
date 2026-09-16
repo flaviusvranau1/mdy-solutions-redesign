@@ -803,8 +803,8 @@
      Fiecare scenă are textul ei (eyebrow, titlu, paragraf); cea veche se retrage în adâncime,
      cea nouă vine spre cameră. Mișcarea e în styles.css (.hero-scene), aici doar se comută.
      ===================================================================== */
-  var SC = [], cur = 0, rotT = 0, rotStart = 0, rotDur = 11000, rotLeft = 11000, tabsHold = false, copyTok = 0, copyAnims = [];
-  var FIRST = 11000, DWELL = 9000, AFTER_CLICK = 15000, TRANS = 1750;
+  var SC = [], cur = 0, rotT = 0, rotStart = 0, rotDur = 7000, rotLeft = 7000, tabsHold = false, copyTok = 0, copyAnims = [];
+  var FIRST = 7000, DWELL = 6000, AFTER_CLICK = 10000, TRANS = 1750;   /* ms: prima scenă, celelalte, după un click pe tab */
   var sceneEls = Array.prototype.slice.call(plate.querySelectorAll('.hero-scene'));
   var tabEls = Array.prototype.slice.call(hero.querySelectorAll('.hero-tab'));
   var tabsBox = hero.querySelector('.hero-tabs');

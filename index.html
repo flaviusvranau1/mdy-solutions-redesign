@@ -98,20 +98,42 @@
       </div>
       <div class="hero-stage" role="img" aria-label="Un server modern într-o sală de servere, protejat de un câmp de lumină, cu două ecrane transparente care arată date demonstrative: amenințări blocate în timp real, comenzi ERP și disponibilitatea infrastructurii">
         <div class="hero-plate">
-          <div class="hero-world">
-            <img class="hero-plate-img" src="assets/hero/plate-1600.webp" srcset="assets/hero/plate-1600.webp 1600w, assets/hero/plate-2752.webp 2752w" sizes="(max-width: 900px) 250vw, 110vw" width="2752" height="1536" alt="" fetchpriority="high" decoding="async">
-            <video class="hero-plate-video" muted loop playsinline preload="none" aria-hidden="true"></video>
-            <canvas class="hero-gl" aria-hidden="true"></canvas>
-            <canvas class="holo holo-main" aria-hidden="true"></canvas>
-            <canvas class="holo holo-small" aria-hidden="true"></canvas>
+          <div class="hero-scene hero-scene--gl is-active" data-scene="comanda">
+            <div class="hero-world">
+              <img class="hero-plate-img" src="assets/hero/plate-1600.webp" srcset="assets/hero/plate-1600.webp 1600w, assets/hero/plate-2752.webp 2752w" sizes="(max-width: 900px) 250vw, 110vw" width="2752" height="1536" alt="" fetchpriority="high" decoding="async">
+              <video class="hero-plate-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+              <canvas class="hero-gl" aria-hidden="true"></canvas>
+              <canvas class="holo holo-main" aria-hidden="true"></canvas>
+              <canvas class="holo holo-small" aria-hidden="true"></canvas>
+            </div>
+          </div>
+          <div class="hero-scene" data-scene="erp" aria-hidden="true">
+            <div class="hero-world">
+              <img class="hero-plate-img" width="2752" height="1536" alt="" decoding="async">
+              <video class="hero-plate-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+              <canvas class="holo holo-erp" aria-hidden="true"></canvas>
+            </div>
+          </div>
+          <div class="hero-scene" data-scene="cloud" aria-hidden="true">
+            <div class="hero-world">
+              <img class="hero-plate-img" width="2752" height="1536" alt="" decoding="async">
+              <video class="hero-plate-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+            </div>
           </div>
           <div class="hero-shade" aria-hidden="true"></div>
         </div>
       </div>
     </div>
     <div class="hero-controls">
-      <button class="hero-ctl" type="button" data-hero="attack">Simulează un atac</button>
-      <button class="hero-ctl" type="button" data-hero="pause" aria-pressed="false">Pauză animație</button>
+      <div class="hero-tabs" role="tablist" aria-label="Scenele din deschidere">
+        <button class="hero-tab is-active" type="button" role="tab" aria-selected="true"><i class="hero-tab-bar"><b></b></i><span class="hero-tab-n">01</span><span class="t-long">Centru de comandă</span><span class="t-short">Comandă</span></button>
+        <button class="hero-tab" type="button" role="tab" aria-selected="false" tabindex="-1"><i class="hero-tab-bar"><b></b></i><span class="hero-tab-n">02</span><span class="t-long">ERP &amp; software</span><span class="t-short">ERP</span></button>
+        <button class="hero-tab" type="button" role="tab" aria-selected="false" tabindex="-1"><i class="hero-tab-bar"><b></b></i><span class="hero-tab-n">03</span><span class="t-long">Infrastructură &amp; cloud</span><span class="t-short">Cloud</span></button>
+      </div>
+      <div class="hero-ctls">
+        <button class="hero-ctl" type="button" data-hero="attack">Simulează un atac</button>
+        <button class="hero-ctl" type="button" data-hero="pause" aria-pressed="false">Pauză animație</button>
+      </div>
     </div>
     <div class="hero-scroll" aria-hidden="true"><i></i>Scroll</div>
   </section>

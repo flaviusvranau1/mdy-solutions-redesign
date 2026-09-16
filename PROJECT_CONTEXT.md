@@ -16,6 +16,36 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-16 (2) — trecerea dintre zone se face în adâncime
+
+- Feedback: „aș fi vrut ca imaginile să se schimbe dar să arate fain când se schimbă,
+  una să se ducă în spate, și asta să se întâmple natural, la câteva secunde”.
+  Înainte era un simplu crossfade de 0,9 s, care se citea ca o tăietură.
+- Acum clipul vechi rămâne vizibil cât se retrage: scale 0.885, se estompează
+  (blur 8px) și se întunecă, iar cel nou vine din spate (scale 1.085, blur 10px)
+  spre cameră și se așază peste el. Scena are `perspective: 1500px`.
+- Tranzițiile sunt separate pe stări, ca să poată avea ritmuri diferite: opacitatea
+  celui care pleacă folosește o curbă ease-in (rămâne vizibil în prima parte, exact
+  cât se vede retragerea), cea a celui care vine are 0,14 s întârziere; transformarea
+  ambelor e pe `--ease-out` 1,5 s, deci mișcarea pornește imediat și se liniștește lent.
+  Starea de repaus are `transition: none`, ca să nu se animeze degeaba înapoi.
+- Textul nu mai apare brusc: cel vechi coboară și dispare în 0,4 s, cel nou intră pe
+  rânduri (icon, titlu, descriere, tag-uri) cu decalaj de 80 ms, după ce imaginea s-a
+  liniștit. Cardurile stau acum în aceeași celulă de grid, ca să se poată suprapune.
+- Peste scenă trece o dâră subtilă de lumină (`.zones-stage.is-changing::before`)
+  exact în momentul schimbării.
+- Zona stă 8 s în loc de 7 s, ca trecerea de 1,5 s să aibă loc fără să pară grăbită.
+- `zones.js`: clasele `is-leaving` / `is-changing`, clipul vechi e oprit abia la
+  finalul retragerii (nu instantaneu, altfel îngheța în timp ce se vedea), iar dacă o
+  zonă redevine activă în timpul retragerii, oprirea programată e anulată.
+- Pe telefon estomparea e mai mică (5px / 4px), ca tranziția să rămână fluidă;
+  la `prefers-reduced-motion` rămâne doar un fade simplu.
+- Verificare: cadre înghețate la 300 / 650 / 1000 ms cu
+  `document.getAnimations().forEach(a => { a.pause(); a.currentTime = ms; })` — capturile
+  cronometrate normal nu sunt de încredere, fiindcă în Chrome headless (SwiftShader)
+  rasterizarea unui video cu blur rămâne mult în urma ceasului. `shot.js` are acum un
+  ultim argument `0` care lasă animațiile să curgă.
+
 ### 2026-09-16 — „Ecosistemul MDY”: câte un clip 3D pentru fiecare zonă
 
 - Cererea clientului (prin Flavius): imaginea lui cu panglica în trei zone (Soluții

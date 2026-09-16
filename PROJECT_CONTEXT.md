@@ -16,6 +16,33 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-16 — hero „Sentinel” v2: mai mic, mai realist, cu paralaxă de adâncime
+
+- Feedback (Flavius): "e puțin cam mare, nu are zonă dinamică mai deloc, fă-l mai
+  realist, calitate mult mai înaltă". Direction kept, execution redone.
+- New plate: a 4-model Higgsfield bake-off (nano_banana_pro 2K, seedream_v5_pro,
+  flux_2, gpt_image_2_5) judged by 3 agents; winner `banana-2` (Nano Banana Pro,
+  2752×1536): real cold aisle with raised perforated floor, cable ladders, racks
+  receding, one modern cabinet at ~68% of frame height, two blank glass panes.
+  Motion: MiniMax H3, 8 s, 2K, start frame = end frame (loop diff 0.8/255), 16 credits.
+  Kling pro, gpt_image and flux 2K are gated on the free plan. Credits left: 91.
+- Renderer (`hero.js` v2, no Three.js): the plate is drawn in WebGL (still or video
+  as texture) with a Depth Anything V2 map (`assets/hero/plate-depth.webp`, panes
+  flattened to the focus depth so the DOM screens stay pixel-registered), so mouse and
+  a slow autonomous drift give real parallax between server, panes and background;
+  the world also gets a slow zoom/translate (Ken Burns) on `.hero-world`; field
+  filaments, ring pulse, attack packets, ripples and film grain live in the same
+  shader (image-pixel coordinates, driven by `PLATE` constants).
+- Size: `PLATE.subject` (0.66) sets the cabinet height as a fraction of the hero; the
+  photo may start right of the copy (left band under the shade) or be letterboxed
+  (edge fades), the main pane is placed right of the measured text edge, the cabinet
+  is always whole in frame. Phone: tight crop pane+cabinet; tablet portrait: near-full
+  scene. Screens: SOC (full / medium / compact layouts by pane width, with a scrolling
+  live traffic line and an ERP KPI) and Infrastructură (landscape) — 2 panes now.
+- Video mapping measured on frames: top −6.2, height 1535.8 image px (MiniMax
+  reframes by ~0.8% vertically). Verified locally at 390, 1024×1366, 1280, 1440,
+  1920; video texture path checked (readyState 4, gl error 0).
+
 ### 2026-09-15 — hero „Sentinel”: server modern + cyber security, generat cu Higgsfield
 
 - Feedback (client + Flavius): the glass command center was "prea basic, nu se vede

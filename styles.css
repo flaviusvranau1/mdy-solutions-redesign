@@ -184,17 +184,19 @@ html.menu-open .nav-burger span:nth-child(3) { transform: translate(-50%, -50%) 
 .hero-plate-img, .hero-plate-video { position: absolute; left: 0; top: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 94% 42%; user-select: none; -webkit-user-drag: none; pointer-events: none; }
 .hero-plate.is-laid .hero-plate-img, .hero-plate.is-laid .hero-plate-video { object-fit: fill; }
 .hero-plate-video { opacity: 0; transition: opacity 1.4s var(--ease-out); }
-.hero-plate.video-on .hero-plate-video { opacity: 1; }
-.hero-plate.video-ready .hero-plate-img { visibility: hidden; }
+.hero-plate.video-on:not(.gl-on) .hero-plate-video { opacity: 1; }
+.hero-gl { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity 0.9s var(--ease-out); pointer-events: none; }
+.hero-plate.gl-on .hero-gl { opacity: 1; }
+.hero-plate.gl-on .hero-plate-img { visibility: hidden; transition: visibility 0s 1s; }
 .hero-plate.is-interactive { cursor: crosshair; }
 .hero-controls { position: absolute; right: var(--gutter); bottom: 22px; z-index: 3; display: flex; gap: 8px; }
 .hero-ctl { font: 600 0.72rem/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); background: rgba(5, 17, 29, 0.6); border: 1px solid var(--line-2); border-radius: 999px; padding: 10px 14px; cursor: pointer; transition: color 0.3s, border-color 0.3s, background 0.3s; }
 .hero-ctl:hover, .hero-ctl:focus-visible { color: var(--glow); border-color: rgba(143, 247, 247, 0.5); background: rgba(8, 30, 48, 0.8); }
 .hero-ctl:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
-.hero-fx { position: absolute; left: 0; top: 0; pointer-events: none; }
+
 .holo { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; backface-visibility: hidden; }
-.hero-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, var(--bg) 0, rgba(5, 17, 29, 0.93) calc(var(--shade-end, 52%) * 0.6), rgba(5, 17, 29, 0) var(--shade-end, 52%)), linear-gradient(180deg, rgba(5, 17, 29, 0.6) 0, rgba(5, 17, 29, 0) 15%), linear-gradient(180deg, var(--bg) var(--edge-t, 0px), rgba(5, 17, 29, 0) var(--edge-t2, 0px)), linear-gradient(0deg, var(--bg) var(--edge-b, 0px), rgba(5, 17, 29, 0) var(--edge-b2, 0px)), linear-gradient(270deg, var(--bg) var(--edge-r, 0px), rgba(5, 17, 29, 0) var(--edge-r2, 0px)); }
-html.no-webgl .hero-fx { display: none; }
+.hero-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, var(--bg) 0, rgba(5, 17, 29, 0.93) calc(var(--shade-end, 52%) * 0.6), rgba(5, 17, 29, 0) var(--shade-end, 52%)), linear-gradient(180deg, rgba(5, 17, 29, 0.6) 0, rgba(5, 17, 29, 0) 15%), linear-gradient(180deg, var(--bg) var(--edge-t, 0px), rgba(5, 17, 29, 0) var(--edge-t2, 0px)), linear-gradient(0deg, var(--bg) var(--edge-b, 0px), rgba(5, 17, 29, 0) var(--edge-b2, 0px)), linear-gradient(90deg, var(--bg) var(--edge-l, 0px), rgba(5, 17, 29, 0) var(--edge-l2, 0px)); }
+html.no-webgl .hero-gl { display: none; }
 /* tabletă ținută vertical: scena sub text, ca pe telefon, dar mai lată */
 @media (min-width: 901px) and (max-width: 1180px) and (orientation: portrait) {
   .hero { min-height: 0; padding-top: 150px; }

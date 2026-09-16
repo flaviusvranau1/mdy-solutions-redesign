@@ -1,6 +1,8 @@
 /* MDY Solutions — „Ecosistemul MDY”: câte un clip 3D pentru fiecare zonă, care se schimbă singur.
-   Fiecare zonă are un poster (webp) și o buclă video scurtă (cameră fixă). Se încarcă doar clipul
-   zonei active; celelalte rămân la poster. Fără WebGL, fără dependențe. */
+   Trecerea dintre zone e în adâncime: clipul vechi se retrage și se estompează, cel nou vine din
+   spate spre cameră și se așază, iar textul intră pe rânduri, ușor decalat. Clasele sunt doar
+   comutate de aici — mișcarea propriu-zisă e în styles.css.
+   Se încarcă doar clipul zonei active și cel următor; restul rămân la poster. */
 (function () {
   'use strict';
   var root = document.querySelector('.zones');
@@ -14,8 +16,9 @@
   var reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var conn = navigator.connection || {};
   var saveData = !!conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '');
-  var DUR = 7000;                      /* cât stă o zonă pe ecran */
-  var idx = 0, timer = 0, startAt = 0, remaining = DUR, paused = false, visible = false, raf = 0;
+  var DUR = 8000;                      /* cât stă o zonă pe ecran, cu tot cu trecere */
+  var TRANS = 1600;                    /* cât ține retragerea în adâncime (vezi styles.css) */
+  var idx = 0, timer = 0, sweep = 0, startAt = 0, remaining = DUR, paused = false, visible = false, raf = 0;
 
   function video(p) { return p.querySelector('video'); }
   function loadZone(i) {
@@ -34,19 +37,57 @@
     if (!v || !v.dataset.loaded || reduceMotion || paused || !visible) return;
     var p = v.play(); if (p && p.catch) p.catch(function () {});
   }
+
+  /* trecerea: elementul vechi primește „is-leaving” și abia la final e oprit/ascuns */
+  function recede(el, after) {
+    if (!el) return;
+    clearTimeout(el._lv);
+    el.classList.add('is-leaving');
+    el._lv = setTimeout(function () {
+      el._lv = 0;
+      if (el.classList.contains('is-active')) return;   /* a redevenit activ între timp */
+      el.classList.remove('is-leaving');
+      if (after) after();
+    }, reduceMotion ? 520 : TRANS);
+  }
+  function settle(el) { if (!el) return; clearTimeout(el._lv); el._lv = 0; el.classList.remove('is-leaving'); }
+  function flash() {
+    if (!stage || reduceMotion) return;
+    stage.classList.remove('is-changing');
+    void stage.offsetWidth;                             /* repornește dâra de lumină */
+    stage.classList.add('is-changing');
+    clearTimeout(sweep);
+    sweep = setTimeout(function () { stage.classList.remove('is-changing'); }, 1400);
+  }
+
   function show(i, user) {
     if (i === idx && root.dataset.ready) return;
-    var prev = idx;
+    var prev = idx, first = !root.dataset.ready;
     idx = (i + panels.length) % panels.length;
+    root.dataset.ready = '1';
+
+    settle(panels[idx]); settle(cards[idx]);
     panels.forEach(function (p, k) { p.classList.toggle('is-active', k === idx); });
-    cards.forEach(function (c, k) { c.classList.toggle('is-active', k === idx); c.hidden = k !== idx; });
+    cards.forEach(function (c, k) {
+      c.classList.toggle('is-active', k === idx);
+      c.setAttribute('aria-hidden', k === idx ? 'false' : 'true');
+    });
     tabs.forEach(function (t, k) {
       t.classList.toggle('is-active', k === idx);
       t.setAttribute('aria-selected', k === idx ? 'true' : 'false');
       t.tabIndex = k === idx ? 0 : -1;
+      if (k === idx) return;
+      var b = t.querySelector('.zone-tab-bar');
+      if (b) { b._p = 0; b.style.transform = 'scaleX(0)'; }
     });
-    root.dataset.ready = '1';
-    if (prev !== idx) { var pv = video(panels[prev]); if (pv && !pv.paused) pv.pause(); }
+
+    if (!first && prev !== idx) {
+      recede(panels[prev], function () {
+        var pv = video(panels[prev]); if (pv && !pv.paused) pv.pause();
+      });
+      recede(cards[prev], null);
+      flash();
+    }
     loadZone(idx); playZone(idx);
     loadZone((idx + 1) % panels.length);          /* pregătește următoarea zonă */
     restart(user);
@@ -114,6 +155,7 @@
   var mq = matchMedia('(prefers-reduced-motion: reduce)');
   if (mq.addEventListener) mq.addEventListener('change', function (e) { reduceMotion = e.matches; if (reduceMotion) { clearTimeout(timer); cancelAnimationFrame(raf); } else restart(); });
 
+  cards.forEach(function (c) { c.hidden = false; });   /* fără JS rămân ascunse din HTML */
   show(0);
   window.mdyZones = { show: show, next: next, pause: pause, info: function () { return { idx: idx, paused: paused, visible: visible, loaded: panels.map(function (p) { var v = video(p); return !!(v && v.dataset.loaded); }) }; } };
 })();

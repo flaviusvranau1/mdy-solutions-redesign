@@ -163,24 +163,65 @@ html.menu-open .nav-burger span:nth-child(1) { transform: translate(-50%, -50%) 
 html.menu-open .nav-burger span:nth-child(2) { opacity: 0; }
 html.menu-open .nav-burger span:nth-child(3) { transform: translate(-50%, -50%) rotate(-45deg); }
 
-/* ---------- ecosistem: câte un clip pentru fiecare zonă ---------- */
+/* ---------- ecosistem: câte un clip 3D pentru fiecare zonă ---------- */
 .zones-stage { position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--bg-2); aspect-ratio: 1.85; }
-.zones-media { position: absolute; inset: 0; }
-.zone-media { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s var(--ease-out); }
-.zone-media.is-active { opacity: 1; }
+.zones-media { position: absolute; inset: 0; perspective: 1500px; perspective-origin: 60% 50%; }
 .zone-media img, .zone-media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.zone-media video { opacity: 0; transition: opacity 0.8s var(--ease-out); }
+.zone-media video { opacity: 0; transition: opacity 0.9s var(--ease-out); }
 .zone-media.is-playing video { opacity: 1; }
-.zone-media.is-active img { animation: zoneDrift 18s var(--ease-out) both; }
-@keyframes zoneDrift { from { transform: scale(1.02); } to { transform: scale(1.07); } }
+
+/* schimbarea zonei: cea veche se retrage în adâncime și se estompează,
+   cea nouă vine din spate spre cameră și se așază. */
+.zone-media {
+  position: absolute; inset: 0; opacity: 0; visibility: hidden; z-index: 0;
+  transform: scale(1.085) translate3d(1.4%, 0, 0);
+  filter: blur(10px) brightness(0.68) saturate(0.82);
+  transition: none;   /* starea de repaus nu se animeaza: intrarea si iesirea isi au tranzitia lor */
+}
+.zone-media.is-active {
+  opacity: 1; visibility: visible; z-index: 2;
+  transform: none; filter: none;
+  transition: opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1) 0.14s, transform 1.5s var(--ease-out), filter 0.9s var(--ease-out) 0.1s;
+}
+.zone-media.is-leaving {
+  opacity: 0; visibility: visible; z-index: 1;
+  transform: scale(0.885) translate3d(-1.1%, 0, 0);
+  filter: blur(8px) brightness(0.5) saturate(0.7);
+  transition: opacity 1s cubic-bezier(0.5, 0, 0.85, 0.35), transform 1.5s var(--ease-out), filter 0.9s linear;
+}
+/* mișcarea lentă de cameră merge mai departe și cât timp imaginea se retrage */
+.zone-media.is-active img, .zone-media.is-active video,
+.zone-media.is-leaving img, .zone-media.is-leaving video { animation: zoneDrift 26s linear both; will-change: transform; }
+@keyframes zoneDrift { from { transform: scale(1.004); } to { transform: scale(1.06); } }
+
+/* o dâră subtilă de lumină trece peste scenă exact când se schimbă zona */
+.zones-stage::before {
+  content: ''; position: absolute; top: -12%; bottom: -12%; left: -30%; right: -30%; z-index: 1; pointer-events: none; opacity: 0;
+  background: linear-gradient(100deg, rgba(25, 203, 211, 0) 40%, rgba(143, 247, 247, 0.1) 47%, rgba(255, 255, 255, 0.07) 51%, rgba(25, 203, 211, 0) 60%);
+}
+.zones-stage.is-changing::before { animation: zoneSweep 1.25s var(--ease-out) both; }
+@keyframes zoneSweep {
+  0% { opacity: 0; transform: translate3d(-42%, 0, 0); }
+  28% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(42%, 0, 0); }
+}
 .zones-stage::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(90deg, var(--bg) 0, rgba(5, 17, 29, 0.86) 34%, rgba(5, 17, 29, 0) 62%), linear-gradient(180deg, rgba(5, 17, 29, 0.35) 0, rgba(5, 17, 29, 0) 40%);
 }
+
 .zones-cards { position: absolute; inset: 0; z-index: 2; display: grid; align-content: center; padding: clamp(20px, 4vw, 54px); pointer-events: none; }
-.zone-card { max-width: 30rem; }
-.zone-card.is-active { animation: zoneIn 0.7s var(--ease-out) both; }
-@keyframes zoneIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.zone-card { grid-area: 1 / 1; max-width: 30rem; visibility: hidden; }
+.zone-card.is-active, .zone-card.is-leaving { visibility: visible; }
+/* textul intră pe rânduri, ușor decalat, după ce imaginea s-a așezat */
+.zone-card:not(.is-active):not(.is-leaving) > * { transition: none; }
+.zone-card > * { opacity: 0; transform: translate3d(0, 20px, 0); transition: opacity 0.55s var(--ease-out), transform 0.95s var(--ease-lux); }
+.zone-card.is-active > * { opacity: 1; transform: none; }
+.zone-card.is-active > :nth-child(1) { transition-delay: 0.3s; }
+.zone-card.is-active > :nth-child(2) { transition-delay: 0.38s; }
+.zone-card.is-active > :nth-child(3) { transition-delay: 0.46s; }
+.zone-card.is-active > :nth-child(4) { transition-delay: 0.54s; }
+.zone-card.is-leaving > * { opacity: 0; transform: translate3d(0, -14px, 0); transition-duration: 0.4s, 0.55s; transition-delay: 0s; }
 .zone-icon { width: 42px; height: 42px; color: var(--glow); margin-bottom: 14px; }
 .zone-card h3 { font-size: clamp(1.5rem, 2.6vw, 2.3rem); margin-bottom: 0.7rem; }
 .zone-card p { color: var(--ink-2); font-size: clamp(0.94rem, 1.1vw, 1.06rem); line-height: 1.6; }
@@ -191,23 +232,30 @@ html.menu-open .nav-burger span:nth-child(3) { transform: translate(-50%, -50%) 
   position: relative; overflow: hidden; flex: 1 1 180px; text-align: left; padding: 13px 16px; border-radius: 14px;
   border: 1px solid var(--line); background: rgba(10, 26, 43, 0.5); color: var(--ink-2);
   font: 600 0.8rem/1.2 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase;
-  transition: color 0.3s, border-color 0.3s, background 0.3s;
+  transition: color 0.45s, border-color 0.45s, background 0.45s;
 }
 .zone-tab:hover { color: var(--ink); border-color: var(--line-2); }
 .zone-tab.is-active { color: var(--ink); border-color: rgba(143, 247, 247, 0.45); background: rgba(16, 36, 58, 0.8); }
-.zone-tab-bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; transform: scaleX(0); transform-origin: left center; background: linear-gradient(90deg, var(--accent), var(--glow)); }
+.zone-tab-bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; transform: scaleX(0); transform-origin: left center; background: linear-gradient(90deg, var(--accent), var(--glow)); transition: opacity 0.4s var(--ease-out); }
 .zone-tab:not(.is-active) .zone-tab-bar { opacity: 0; }
 @media (max-width: 900px) {
   .zones-stage { aspect-ratio: 1.05; }
   .zones-stage::after { background: linear-gradient(180deg, rgba(5, 17, 29, 0.12) 0, rgba(5, 17, 29, 0.42) 46%, rgba(5, 17, 29, 0.96) 88%); }
   .zones-cards { align-content: end; }
   .zone-card { max-width: none; }
+  /* pe telefon ținem estomparea mică, ca tranziția să rămână fluidă */
+  .zone-media { transform: scale(1.06) translate3d(1%, 0, 0); filter: blur(5px) brightness(0.72); }
+  .zone-media.is-leaving { transform: scale(0.93) translate3d(-0.8%, 0, 0); filter: blur(4px) brightness(0.55); }
   .zone-tabs { gap: 8px; }
   .zone-tab { flex: 1 1 140px; padding: 11px 12px; font-size: 0.72rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .zone-media.is-active img { animation: none; }
-  .zone-card.is-active { animation: none; }
+  .zone-media, .zone-media.is-active, .zone-media.is-leaving { transform: none; filter: none; transition: opacity 0.5s linear; }
+  .zone-media.is-active img, .zone-media.is-active video,
+  .zone-media.is-leaving img, .zone-media.is-leaving video { animation: none; }
+  .zone-card > * { transform: none; transition-duration: 0.3s; }
+  .zone-card.is-active > * { transition-delay: 0s; }
+  .zones-stage.is-changing::before { animation: none; }
 }
 
 /* ---------- hero ---------- */

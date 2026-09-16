@@ -1,9 +1,9 @@
-/* MDY Solutions — hero „Sentinel”: server modern într-un câmp de protecție, cu ecrane holografice live.
-   Placa foto (Higgsfield: Nano Banana Pro + Veo 3.1 Lite, upscale 2K) stă în spate; peste ea:
-   - trei ecrane transparente cu date live (canvas 2D mapat exact pe sticla din imagine prin matrix3d)
-   - un strat WebGL cu filamentele câmpului, pulsul inelului, atacuri care sunt blocate la contact
-   - câmpul de particule al paginii (canvas #scene)
-   Fără WebGL: rămân placa, video-ul și ecranele. Cu reduced-motion: cadru static. */
+/* MDY Solutions — hero „Sentinel” v2: server modern într-un câmp de protecție, cu ecrane holografice live.
+   Placa foto (Higgsfield) e randată în WebGL cu o hartă de adâncime: mouse-ul și o derivă lentă a
+   camerei dau paralaxă reală între server, fundal și ecrane. Peste ea, în același shader: filamentele
+   câmpului, pulsul inelului, atacuri blocate la contact, granulație fină. Video-ul (buclă, cameră fixă)
+   înlocuiește fotografia când e gata. Ecranele: canvas 2D mapat exact pe sticla din imagine (matrix3d).
+   Fără WebGL: rămân fotografia și ecranele. Cu reduced-motion: cadru static. */
 (function () {
   'use strict';
   var root = document.documentElement;
@@ -13,9 +13,8 @@
   var world = plate.querySelector('.hero-world');
   var img = plate.querySelector('.hero-plate-img');
   var video = plate.querySelector('.hero-plate-video');
-  var fxCanvas = plate.querySelector('.hero-fx');
+  var glCanvas = plate.querySelector('.hero-gl');
   var copy = hero.querySelector('.hero-copy');
-  var stage = hero.querySelector('.hero-stage');
 
   var reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var coarse = matchMedia('(pointer: coarse)').matches;
@@ -31,15 +30,25 @@
   function rnd(i) { var x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }
   function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
 
-  /* ---------- geometria plăcii (pixeli în imaginea 2752×1536, măsurați pe fișier) ---------- */
-  var IW = 2752, IH = 1536;
-  var PANES = {
-    main: [[1229, 457.6], [1771, 426.4], [1771, 879.2], [1229, 872.6]],
-    mid: [[1825, 495.6], [2116, 469.1], [2116, 805.8], [1825, 810.2]],
-    small: [[2170, 533], [2312, 526.4], [2312, 765.8], [2170, 766.9]]
+  /* ---------- geometria plăcii (pixeli în imaginea sursă, măsurați pe fișier) ---------- */
+  var PLATE = window.MDY_PLATE || {
+    w: 2752, h: 1536,
+    src: 'assets/hero/plate-2752.webp', srcSmall: 'assets/hero/plate-1600.webp', depth: 'assets/hero/plate-depth.webp', focus: 0.3815,
+    video: { w: 'assets/hero/plate-loop-1920.mp4', n: 'assets/hero/plate-loop-1280.mp4', top: -6.2, height: 1535.8 },   /* potrivit pe muchiile sticlei din cadre */
+    panes: {
+      main: [[1098.4, 403.8], [1607.5, 351.7], [1608.3, 768.5], [1097.7, 772.9]],
+      small: [[874.1, 812.4], [1159, 814.7], [1159, 1054.5], [878, 1038]]
+    },
+    anchor: [1700, 760],                     /* centrul de interes (originea zoom-ului lent) */
+    cabinet: [1420, 200, 2000, 1240],        /* dreptunghiul serverului: x0, y0, x1, y1 */
+    subject: 0.66,                           /* înălțimea serverului ca fracțiune din hero (desktop) */
+    field: { cx: 1700, hw: 230, top: 0, bottom: 1240 },          /* fasciculele de lumină de deasupra serverului */
+    ring: { cx: 1720, cy: 1240, rx: 380, ry: 58 },               /* inelul de pe podea */
+    lanes: { up: [[960, 60], [1470, 380]], low: [[1240, 1400], [1480, 1090]] },   /* traseele atacurilor */
+    fx: { left: 1000 }                       /* efectele se calculează doar la dreapta de aici */
   };
-  var VIDEO_MAP = { top: (IH - IW * 9 / 16) / 2, height: IW * 9 / 16 };   /* video 16:9 = aceeași imagine scalată uniform (confirmat prin comparație de cadre) */
-  var FIELD = { cx: 1890, left: 1350, right: 2430, ringY: 1296, ringRx: 548, ringRy: 48 };
+  var IW = PLATE.w, IH = PLATE.h, PANES = PLATE.panes;
+  var VIDEO_MAP = PLATE.video;
 
   /* omografie: pătratul unitate -> patrulater (pentru matrix3d) */
   function solve8(A, b) {
@@ -65,49 +74,72 @@
     return 'matrix3d(' + m.map(function (v) { return +v.toFixed(8); }).join(',') + ')';
   }
 
-  /* ---------- layout: unde stă placa în hero (desktop) sau în scenă (telefon) ---------- */
+  /* ---------- layout: fotografia acoperă hero-ul; ecranul principal stă la dreapta textului ---------- */
   var L = { s: 0.5, ox: 0, oy: 0, pw: 1, ph: 1, compact: false };
+  var COMPACT_MQ = matchMedia('(max-width: 900px), (max-width: 1180px) and (orientation: portrait)');
+  var OVER = 1.025;                          /* rezervă pentru paralaxă, ca marginile să nu se vadă */
   function layout() {
     var pw = plate.clientWidth, ph = plate.clientHeight;
     if (!pw || !ph) return;
-    var compact = COMPACT_MQ.matches, s, ox, oy;
+    var compact = COMPACT_MQ.matches, s, ox, oy, paneL = 0;
+    var mainL = PANES.main[0][0], mainR = PANES.main[1][0], leftL = Math.min(mainL, PANES.small ? PANES.small[0][0] : mainL);
+    var cab = PLATE.cabinet;
     if (!compact) {
-      var pr = plate.getBoundingClientRect(), cr = copy ? copy.getBoundingClientRect() : { right: pr.left + pw * 0.45 };
-      var copyR = cr.right - pr.left, paneL = Math.max(copyR + 44, pw * 0.47);
-      s = Math.min((pw - 18 - paneL) / (2330 - 1229), ph / 1230);
-      /* fotografia umple toată înălțimea hero-ului dacă asta mărește scena cu cel mult 15% */
-      s = Math.max(s, Math.min(ph / IH, s * 1.15));
-      if (paneL + 1101 * s > pw - 12) paneL = Math.max(copyR + 20, pw - 12 - 1101 * s);
-      ox = paneL - 1229 * s;
-      oy = ph / 2 - 760 * s;
-      if (IH * s >= ph) oy = Math.min(0, Math.max(ph - IH * s, oy));
+      var pr = plate.getBoundingClientRect();
+      var copyR = copyTextRight() - pr.left;
+      /* mărimea scenei: serverul ocupă SUBJECT din înălțimea hero-ului; fotografia poate fi mai mică decât hero-ul
+         (marginile se topesc în fundal) și poate începe la dreapta textului */
+      s = Math.max(PLATE.subject * ph / (cab[3] - cab[1]), 0.86 * ph / IH, (pw * 0.5) / IW);
+      paneL = Math.max(copyR + 28, pw * 0.4);
+      ox = paneL - leftL * s;
+      if (ox + cab[2] * s > pw - 16) ox = pw - 16 - cab[2] * s;          /* serverul rămâne întreg în cadru */
+      if (ox + IW * s < pw) { s = Math.max(s, (pw - ox) / IW); }          /* fotografia acoperă marginea dreaptă */
+      oy = IH * s >= ph ? clamp(ph / 2 - PLATE.anchor[1] * s, ph - IH * s, 0) : (ph - IH * s) / 2;
     } else {
-      s = Math.min(pw / 1150, ph / 1280);
-      ox = pw / 2 - 1770 * s;
-      oy = ph / 2 - 770 * s;
+      var sceneC = (mainL + cab[2]) / 2 - 10;
+      if (pw < 600) {
+        /* telefon: cadru strâns pe ecranul principal + server */
+        s = Math.max(pw / (cab[2] - mainL + 130), 0.9 * ph / IH);
+      } else {
+        /* tabletă ținută vertical: scena aproape întreagă, serverul la ~60% din înălțime */
+        s = Math.max(0.9 * ph / IH, pw / IW, 0.6 * ph / (cab[3] - cab[1]));
+      }
+      ox = pw / 2 - sceneC * s;
+      if (ox + IW * s < pw) ox = pw - IW * s;
+      if (ox > 0) ox = 0;
+      oy = IH * s >= ph ? clamp(ph / 2 - (PLATE.anchor[1] - 40) * s, ph - IH * s, 0) : (ph - IH * s) / 2;
     }
     L.s = s; L.ox = ox; L.oy = oy; L.pw = pw; L.ph = ph; L.compact = compact;
     var box = 'left:' + ox.toFixed(2) + 'px;top:' + oy.toFixed(2) + 'px;width:' + (IW * s).toFixed(2) + 'px;height:' + (IH * s).toFixed(2) + 'px';
     img.style.cssText = box;
+    if (glCanvas) glCanvas.style.cssText = box;
+    if (video) video.style.cssText = 'left:' + ox.toFixed(2) + 'px;top:' + (oy + VIDEO_MAP.top * s).toFixed(2) + 'px;width:' + (IW * s).toFixed(2) + 'px;height:' + (VIDEO_MAP.height * s).toFixed(2) + 'px';
+    var eT = Math.max(0, oy), eB = Math.max(0, ph - (oy + IH * s)), eL = Math.max(0, ox);
+    plate.style.setProperty('--edge-t', Math.ceil(eT) + 'px'); plate.style.setProperty('--edge-t2', Math.ceil(eT ? eT + 120 : 0) + 'px');
+    plate.style.setProperty('--edge-b', Math.ceil(eB) + 'px'); plate.style.setProperty('--edge-b2', Math.ceil(eB ? eB + 120 : 0) + 'px');
+    plate.style.setProperty('--edge-l', Math.ceil(eL) + 'px'); plate.style.setProperty('--edge-l2', Math.ceil(eL ? eL + 160 : 0) + 'px');
     var wantSizes = Math.round(IW * s) + 'px';
     if (img.getAttribute('sizes') !== wantSizes) img.setAttribute('sizes', wantSizes);
     L.heroTop = hero.getBoundingClientRect().top + (window.scrollY || 0); L.heroH = hero.offsetHeight;
-    if (video) video.style.cssText = 'left:' + ox.toFixed(2) + 'px;top:' + (oy + VIDEO_MAP.top * s).toFixed(2) + 'px;width:' + (IW * s).toFixed(2) + 'px;height:' + (VIDEO_MAP.height * s).toFixed(2) + 'px';
-    plate.style.setProperty('--shade-end', Math.round((compact ? 0 : paneL - 30)) + 'px');
-    /* dacă fotografia nu acoperă o margine (ecrane foarte late sau scurte), marginea se topește în fundal */
-    var eT = Math.max(0, oy), eB = Math.max(0, ph - (oy + IH * s)), eR = Math.max(0, pw - (ox + IW * s));
-    plate.style.setProperty('--edge-t', eT ? Math.ceil(eT) + 'px' : '0px'); plate.style.setProperty('--edge-t2', eT ? Math.ceil(eT + 140) + 'px' : '0px');
-    plate.style.setProperty('--edge-b', eB ? Math.ceil(eB) + 'px' : '0px'); plate.style.setProperty('--edge-b2', eB ? Math.ceil(eB + 140) + 'px' : '0px');
-    plate.style.setProperty('--edge-r', eR ? Math.ceil(eR) + 'px' : '0px'); plate.style.setProperty('--edge-r2', eR ? Math.ceil(eR + 160) + 'px' : '0px');
+    var a = toPlate(PLATE.anchor);
+    world.style.transformOrigin = a[0].toFixed(1) + 'px ' + a[1].toFixed(1) + 'px';
+    plate.style.setProperty('--shade-end', Math.round(compact ? 0 : (ox + leftL * s) - 24) + 'px');
+    L.textR = compact ? 0 : copyR;
     plate.classList.add('is-laid');
     layoutPanes();
-    layoutFx();
+    layoutGl();
     if (!running && bootAt >= 0) renderStatic();
   }
   function toPlate(p) { return [L.ox + p[0] * L.s, L.oy + p[1] * L.s]; }
-  /* aceeași regulă ca în CSS: telefon sau tabletă ținută vertical = scena sub text */
-  var COMPACT_MQ = matchMedia('(max-width: 900px), (max-width: 1180px) and (orientation: portrait)');
-
+  /* marginea dreaptă a textului din coloana de copy (nu a coloanei), ca ecranul să stea lângă text, nu departe */
+  function copyTextRight() {
+    if (!copy) return 0;
+    var r = copy.getBoundingClientRect().left + 200, rg = document.createRange();
+    copy.querySelectorAll('.h1-inner, .hero-lead, .hero-actions > *, .hero-meta li, .hero-eyebrow').forEach(function (el) {
+      try { rg.selectNodeContents(el); var b = rg.getBoundingClientRect(); if (b.width > 0) r = Math.max(r, b.right); } catch (e) { r = Math.max(r, el.getBoundingClientRect().right); }
+    });
+    return r;
+  }
   /* =====================================================================
      Ecranele holografice (canvas 2D, text crocant, fixate pe sticla din imagine)
      ===================================================================== */
@@ -115,9 +147,8 @@
   var FB = 'Inter, "Segoe UI", Arial, sans-serif';
   var C = { teal: '#19cbd3', aqua: '#8ff7f7', amber: '#ffb454', green: '#3fd68c', ink: '#eaf6fa', ink2: '#b6ccd6', muted: '#7d96a6' };
   var SCREENS = [
-    { key: 'main', dw: 1000, dh: 800, q: PANES.main },
-    { key: 'mid', dw: 580, dh: 650, q: PANES.mid },
-    { key: 'small', dw: 300, dh: 500, q: PANES.small }
+    { key: 'main', dw: 1000, dh: 820, q: PANES.main },
+    { key: 'small', dw: 600, dh: 490, q: PANES.small }
   ];
   SCREENS.forEach(function (sc) {
     sc.el = plate.querySelector('.holo-' + sc.key);
@@ -134,7 +165,10 @@
       if (sc.el.width !== bw || sc.el.height !== bh) { sc.el.width = bw; sc.el.height = bh; }
       sc.el.style.width = w + 'px'; sc.el.style.height = h + 'px';
       sc.baseQ = q; sc.w = w; sc.h = h; sc.baseM = matrix3d(w, h, q); sc.chrome = null;
-      sc.compact = w < 250;
+      /* un ecran care ar cădea peste text (ecrane înguste) rămâne stins */
+      sc.hidden = !L.compact && L.textR && Math.min(q[0][0], q[3][0]) < L.textR + 8;
+      sc.el.style.visibility = sc.hidden ? 'hidden' : '';
+      sc.compact = w < 205; sc.medium = !sc.compact && w < 300;
       placeScreen(sc, 0, 0);
     });
   }
@@ -228,6 +262,34 @@
       bootClip(g, dw, dh, sc.on);
       return;
     }
+    if (sc.medium) {
+      /* ecran mediu (desktop la 1280–1600 px): mai puține rânduri, litere mai mari */
+      txt(g, 'MDY · SECURITY OPERATIONS', 74, 68, C.aqua, 600, 34, FB, 'left', 4);
+      var lw2 = txt(g, 'DEMO LIVE', 952, 68, C.green, 700, 30, FB, 'right', 3);
+      g.fillStyle = mix(C.green, C.green, 0, 0.55 + 0.45 * pulse); g.beginPath(); g.arc(952 - lw2 - 24, 58, 9, 0, 6.2832); g.fill();
+      g.fillStyle = 'rgba(143,247,247,0.16)'; g.fillRect(48, 98, 904, 2);
+      txt(g, 'Amenințări blocate azi', 48, 178, C.ink2, 500, 44);
+      glowTxt(sc, g, 'n', fmt(soc.shown), 42, 390, numCol, 700, 240, FT);
+      var pw2 = pillTxt(g, 48, 492, 'PROTEJAT', C.teal, 48);
+      txt(g, 'SOC 24/7', 48 + pw2 + 24, 480, C.muted, 500, 36);
+      txt(g, 'Trafic blocat · 60 s', 48, 566, C.muted, 500, 30);
+      liveLine(g, 48, 578, 904, 80, t, 2.7, C.teal, sc.on);
+      g.save(); g.beginPath(); g.rect(40, 676, 920, 144); g.clip();
+      var sh2 = soc.feed.length && soc.feed[0].age < 1 ? (1 - ease(soc.feed[0].age / 0.5)) : 0;
+      for (var r2 = 0; r2 < Math.min(2, soc.feed.length); r2++) {
+        var it2 = soc.feed[r2], y2 = 724 + (r2 - sh2) * 66;
+        it2.age += dt;
+        if (it2.age < 1.2) { g.fillStyle = mix(C.amber, C.teal, clamp(it2.age / 1.2, 0, 1), 0.22 * (1 - it2.age / 1.2)); g.fillRect(40, y2 - 42, 920, 62); }
+        g.globalAlpha = r2 === 0 ? clamp(it2.age / 0.35, 0, 1) : 1;
+        txt(g, it2.time, 48, y2, C.muted, 500, 30);
+        txt(g, it2.type, 220, y2, C.ink, 600, 36);
+        pillTxt(g, 952, y2 + 4, 'BLOCAT', it2.age < 0.6 ? C.amber : C.teal, 28, true);
+        g.globalAlpha = 1;
+      }
+      g.restore();
+      bootClip(g, dw, dh, sc.on);
+      return;
+    }
     txt(g, 'MDY · SECURITY OPERATIONS', 74, 66, C.aqua, 600, 28, FB, 'left', 4);
     var lw = txt(g, 'DEMO LIVE', 952, 66, C.green, 700, 26, FB, 'right', 3);
     g.fillStyle = mix(C.green, C.green, 0, 0.55 + 0.45 * pulse); g.beginPath(); g.arc(952 - lw - 22, 56, 8, 0, 6.2832); g.fill();
@@ -236,13 +298,14 @@
     glowTxt(sc, g, 'n', fmt(soc.shown), 42, 350, numCol, 700, 210, FT);
     var pw = pillTxt(g, 48, 452, 'PROTEJAT', C.teal, 40);
     txt(g, 'Firewall · EDR · SOC 24/7', 48 + pw + 22, 440, C.muted, 500, 30);
-    /* grafic: blocări pe ultimele 24 de ore */
-    var bw = 904 / 24;
-    for (var i = 0; i < 24; i++) {
-      var v = soc.spark[i] * (0.85 + 0.15 * Math.sin(t * 1.4 + i)) * ease(sc.on * 1.5 - i * 0.02), h = 86 * v;
-      rr(g, 48 + i * bw + 3, 606 - h, bw - 6, h, 3);
-      g.fillStyle = i === 23 ? C.aqua : 'rgba(25,203,211,' + (0.28 + 0.4 * (i / 23)).toFixed(3) + ')'; g.fill();
-    }
+    /* rând de indicatori: trafic blocat (grafic viu) + ERP */
+    g.fillStyle = 'rgba(143,247,247,0.10)'; g.fillRect(48, 494, 904, 1);
+    txt(g, 'Trafic blocat · 60 s', 48, 534, C.muted, 500, 24);
+    liveLine(g, 48, 546, 470, 62, t, 2.7, C.teal, sc.on);
+    txt(g, 'ERP · comenzi azi', 560, 534, C.muted, 500, 24);
+    txt(g, fmt((1284 + Math.floor(t / 6)) * ease(sc.on * 1.3)), 560, 598, C.ink, 700, 60, FT);
+    txt(g, '+12%', 560 + measure(g, fmt(1284 + Math.floor(t / 6)), 700, 60, FT) + 16, 596, C.green, 700, 30, FT);
+    g.fillStyle = 'rgba(143,247,247,0.10)'; g.fillRect(48, 622, 904, 1);
     /* fluxul de amenințări blocate */
     g.save(); g.beginPath(); g.rect(40, 626, 920, 170); g.clip();
     var shift = soc.feed.length && soc.feed[0].age < 1 ? (1 - ease(soc.feed[0].age / 0.5)) : 0;
@@ -282,15 +345,36 @@
     var g = sc.ctx, dw = sc.dw, dh = sc.dh;
     g.setTransform(sc.el.width / dw, 0, 0, sc.el.height / dh, 0, 0);
     glass(sc, g, dw, dh);
-    txt(g, 'ERP', 30, 70, C.aqua, 700, 46, FB, 'left', 4);
-    glowTxt(sc, g, 'n', fmt((1284 + Math.floor(t / 6)) * ease(sc.on * 1.3)), 26, 206, '#ffffff', 700, 120, FT);
-    txt(g, 'comenzi azi', 30, 256, C.ink2, 500, 36);
-    for (var i = 0; i < 6; i++) {
-      var h = 120 * (0.35 + 0.55 * rnd(i * 5.3)) * (0.88 + 0.12 * Math.sin(t * 1.2 + i)) * ease(sc.on * 1.4 - i * 0.06);
-      rr(g, 30 + i * 42, 420 - h, 30, h, 4); g.fillStyle = i === 5 ? C.aqua : 'rgba(25,203,211,0.55)'; g.fill();
+    txt(g, 'INFRASTRUCTURĂ', 36, 66, C.aqua, 600, 30, FB, 'left', 3);
+    txt(g, 'Uptime 30 zile', 36, 130, C.ink2, 500, 30);
+    glowTxt(sc, g, 'n', (99.98 * ease(sc.on * 1.3)).toFixed(2).replace('.', ',') + '%', 32, 262, '#ffffff', 700, 140, FT);
+    var names = ['CPU', 'RAM', 'REȚEA'], base = [0.38, 0.61, 0.47], cols = [C.teal, '#5b8cff', C.aqua];
+    for (var i = 0; i < 3; i++) {
+      var y = 326 + i * 48, v = clamp(base[i] + 0.12 * Math.sin(t * (0.9 + i * 0.37) + i * 2) + 0.05 * Math.sin(t * 3.1 + i), 0.05, 0.98) * ease(sc.on * 1.4 - i * 0.1);
+      txt(g, names[i], 36, y, C.muted, 600, 24, FB, 'left', 2);
+      rr(g, 130, y - 17, 300, 14, 7); g.fillStyle = 'rgba(143,247,247,0.10)'; g.fill();
+      rr(g, 130, y - 17, Math.max(14, 300 * v), 14, 7); g.fillStyle = cols[i]; g.fill();
+      txt(g, Math.round(v * 100) + '%', 564, y, C.ink2, 600, 24, FB, 'right');
     }
-    txt(g, '+12%', 30, 474, C.green, 700, 52, FT);
+    g.fillStyle = C.green; g.beginPath(); g.arc(46, 454, 8, 0, 6.2832); g.fill();
+    txt(g, '42/42 servere online', 66, 463, C.ink, 600, 28);
     bootClip(g, dw, dh, sc.on);
+  }
+  function measure(g, s, w, size, fam) { g.font = w + ' ' + size + 'px ' + fam; return g.measureText(s).width; }
+  /* linie „live” care curge spre stânga (ca un monitor de trafic) */
+  function liveLine(g, x, y, w, h, t, seed, col, on) {
+    var n = 40, step = w / (n - 1), sh = t * 2.2, base = Math.floor(sh), fr = sh - base;
+    g.save(); g.beginPath(); g.rect(x, y - 4, w, h + 8); g.clip();
+    g.beginPath();
+    for (var k = 0; k <= n; k++) {
+      var v = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin((base + k) * 0.7 + seed)) + 0.2 * (rnd((base + k) * 3.3 + seed) - 0.5);
+      var px = x + (k - fr) * step, py = y + h - h * clamp(v, 0.05, 0.98) * on;
+      if (k) g.lineTo(px, py); else g.moveTo(px, py);
+    }
+    g.lineWidth = 3; g.strokeStyle = col; g.lineJoin = 'round'; g.stroke();
+    g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.closePath();
+    var grd = g.createLinearGradient(0, y, 0, y + h); grd.addColorStop(0, 'rgba(25,203,211,0.28)'); grd.addColorStop(1, 'rgba(25,203,211,0)'); g.fillStyle = grd; g.fill();
+    g.restore();
   }
   /* cifrele mari cu strălucire: randate o dată în cache, refolosite până se schimbă textul */
   function glowTxt(sc, g, slot, s, x, y, col, w, size, fam) {
@@ -328,109 +412,149 @@
     return 'rgba(' + Math.round(lerp(A[0], B[0], t)) + ',' + Math.round(lerp(A[1], B[1], t)) + ',' + Math.round(lerp(A[2], B[2], t)) + ',' + (alpha === undefined ? 1 : alpha) + ')';
   }
 
+
   /* =====================================================================
-     Stratul de efecte (WebGL brut): filamentele câmpului, inelul, atacuri și unde de impact
-     Lucrează în coordonatele imaginii, deci rămâne lipit de fotografie la orice mărime.
+     Placa în WebGL: fotografie sau video cu paralaxă de adâncime + efectele, într-un singur shader.
+     Coordonatele efectelor sunt pixeli în imaginea sursă, deci rămân lipite de fotografie la orice mărime.
      ===================================================================== */
-  var FX_REGION = { x0: 980, y0: 0, x1: IW, y1: IH };
-  var gl = null, fxProg = null, fxU = {}, fxOk = false;
+  var gl = null, prog = null, U = {}, glOk = false, texStill = null, texDep = null, texVid = null, stillReady = false, depReady = false, vidTexReady = false;
   var MAXP = 4, packets = [], ripples = [], ringPulse = 0;
-  var FX_FS = [
-    '#ifdef GL_FRAGMENT_PRECISION_HIGH',
-    'precision highp float;',
-    '#else',
-    'precision mediump float;',
-    '#endif',
-    'uniform vec2 uRes; uniform vec4 uReg; uniform float uTime, uOn, uPulse;',
+  var GL_FS = [
+    '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
+    'uniform vec2 uRes, uImg, uPar, uVidMap;',
+    'uniform sampler2D uTex, uVid, uDep;',
+    'uniform float uUseVid, uUseDep, uFocus, uTime, uOn, uPulse, uGrain, uFxLeft;',
+    'uniform vec4 uField, uRing;',
     'uniform vec4 uPk[4]; uniform vec4 uRp[4];',
     'const vec3 TEAL = vec3(0.098, 0.796, 0.827); const vec3 AQUA = vec3(0.56, 0.97, 0.97); const vec3 AMBER = vec3(1.0, 0.706, 0.33);',
     'float hash(float n){ return fract(sin(mod(n, 997.0) * 12.9898) * 43758.5453); }',
     'void main(){',
     '  vec2 f = gl_FragCoord.xy / uRes;',
-    '  vec2 p = vec2(mix(uReg.x, uReg.z, f.x), mix(uReg.w, uReg.y, f.y));',   /* pixeli în imagine, y în jos */
-    '  vec3 col = vec3(0.0); float a = 0.0;',
-    '  float fx = (p.x - 1890.0) / 540.0;',
-    '  if (abs(fx) < 1.02 && p.y < 1296.0) {',
-    '    float edge = smoothstep(0.55, 1.0, abs(fx)) * (1.0 - smoothstep(1.0, 1.02, abs(fx)));',
-    '    float colId = floor(p.x / 6.0); float h = hash(colId);',
-    '    float streak = fract(p.y / (160.0 + 260.0 * h) + uTime * (0.25 + 0.55 * h) + h * 7.0);',
-    '    float dash = smoothstep(0.0, 0.08, streak) * (1.0 - smoothstep(0.08, 0.35, streak)) * step(0.62, hash(colId + 3.1));',
-    '    float fade = (1.0 - smoothstep(1100.0, 1296.0, p.y)) * 0.55 + 0.45 * smoothstep(0.0, 400.0, p.y);',
-    '    float k = (0.02 + 0.22 * edge) * dash * fade * uOn;',
-    '    col += AQUA * k; a += k;',
+    '  vec2 uv = vec2(f.x, 1.0 - f.y);',
+    '  float d = uUseDep > 0.5 ? texture2D(uDep, uv).r : uFocus;',
+    '  vec2 duv = clamp(uv + (d - uFocus) * uPar, 0.0, 1.0);',
+    '  vec3 col;',
+    '  if (uUseVid > 0.5) { vec2 vv = vec2(duv.x, clamp((duv.y - uVidMap.x) / uVidMap.y, 0.0, 1.0)); col = texture2D(uVid, vv).rgb; }',
+    '  else col = texture2D(uTex, duv).rgb;',
+    '  vec2 p = duv * uImg;',
+    '  vec3 fx = vec3(0.0);',
+    '  if (p.x > uFxLeft) {',
+    '    float fxn = (p.x - uField.x) / uField.y;',
+    '    if (abs(fxn) < 1.02 && p.y > uField.z && p.y < uField.w) {',
+    '      float edge = smoothstep(0.55, 1.0, abs(fxn)) * (1.0 - smoothstep(1.0, 1.02, abs(fxn)));',
+    '      float colId = floor(p.x / 6.0); float h = hash(colId);',
+    '      float streak = fract(p.y / (160.0 + 260.0 * h) + uTime * (0.25 + 0.55 * h) + h * 7.0);',
+    '      float dash = smoothstep(0.0, 0.08, streak) * (1.0 - smoothstep(0.08, 0.35, streak)) * step(0.62, hash(colId + 3.1));',
+    '      float fade = (1.0 - smoothstep(uField.w - 200.0, uField.w, p.y)) * 0.55 + 0.45 * smoothstep(uField.z, uField.z + 400.0, p.y);',
+    '      fx += AQUA * (0.02 + 0.22 * edge) * dash * fade;',
+    '    }',
+    '    vec2 e = vec2((p.x - uRing.x) / uRing.z, (p.y - uRing.y) / uRing.w);',
+    '    float dd = length(e); float rd0 = (dd - 1.0) * 26.0; float ring = exp(-rd0 * rd0);',
+    '    float ang = atan(e.y, e.x);',
+    '    float travel = pow(0.5 + 0.5 * cos(ang - uTime * 1.3), 18.0) + pow(0.5 + 0.5 * cos(ang + uTime * 0.7 + 2.0), 30.0);',
+    '    fx += mix(AQUA, vec3(1.0), 0.3) * ring * (0.10 * travel + 0.75 * uPulse);',
+    '    float wv = (dd - 1.0 - (1.0 - uPulse) * 0.35) * 9.0; float wave = exp(-wv * wv) * uPulse * step(0.0, e.y + 0.2);',
+    '    fx += TEAL * wave * 0.45;',
+    '    for (int i = 0; i < 4; i++) {',
+    '      vec4 k = uPk[i]; if (k.z <= 0.0) continue;',
+    '      vec2 dir = vec2(cos(k.w), sin(k.w));',
+    '      vec2 rel = p - k.xy; float along = dot(rel, dir); float perp = length(rel - dir * along);',
+    '      float head = exp(-dot(rel, rel) / 90.0);',
+    '      float trail = step(along, 0.0) * exp(along / 140.0) * exp(-perp * perp / 18.0);',
+    '      float halo = exp(-dot(rel, rel) / 1400.0) * 0.35;',
+    '      fx += mix(AMBER, vec3(1.0, 0.92, 0.75), head) * (head * 1.6 + trail * 0.9 + halo) * k.z;',
+    '    }',
+    '    for (int i = 0; i < 4; i++) {',
+    '      vec4 r = uRp[i]; if (r.w <= 0.0) continue;',
+    '      float age = r.z;',
+    '      vec2 q = vec2((p.x - r.x) / (26.0 + 70.0 * age), (p.y - r.y) / (70.0 + 420.0 * age));',
+    '      float rd = length(q);',
+    '      float bb = (rd - 1.0) * 5.0; float band = exp(-bb * bb) * (1.0 - smoothstep(0.96, 1.02, abs(fxn)));',
+    '      float hex = 0.6 + 0.4 * sin(p.y * 0.22) * sin(p.x * 0.19 + p.y * 0.11);',
+    '      float flash = exp(-rd * rd * 3.0) * pow(1.0 - age, 6.0);',
+    '      fx += mix(AMBER, AQUA, smoothstep(0.0, 0.35, age)) * (band * hex * pow(1.0 - age, 1.6) + flash) * r.w;',
+    '    }',
     '  }',
-    '  vec2 e = vec2((p.x - 1890.0) / 548.0, (p.y - 1296.0) / 48.0);',
-    '  float d = length(e);',
-    '  float rd0 = (d - 1.0) * 26.0; float ring = exp(-rd0 * rd0);',
-    '  float ang = atan(e.y, e.x);',
-    '  float travel = pow(0.5 + 0.5 * cos(ang - uTime * 1.3), 18.0) + pow(0.5 + 0.5 * cos(ang + uTime * 0.7 + 2.0), 30.0);',
-    '  float rk = ring * (0.10 * travel + 0.75 * uPulse) * uOn;',
-    '  col += mix(AQUA, vec3(1.0), 0.3) * rk; a += rk;',
-    '  float wv = (d - 1.0 - (1.0 - uPulse) * 0.35) * 9.0; float wave = exp(-wv * wv) * uPulse * step(0.0, e.y + 0.2);',
-    '  col += TEAL * wave * 0.45; a += wave * 0.45;',
-    '  for (int i = 0; i < 4; i++) {',
-    '    vec4 k = uPk[i]; if (k.z <= 0.0) continue;',
-    '    vec2 dir = vec2(cos(k.w), sin(k.w));',
-    '    vec2 rel = p - k.xy; float along = dot(rel, dir); float perp = length(rel - dir * along);',
-    '    float head = exp(-dot(rel, rel) / 90.0);',
-    '    float trail = step(along, 0.0) * exp(along / 140.0) * exp(-perp * perp / 18.0);',
-    '    float halo = exp(-dot(rel, rel) / 1400.0) * 0.35;',
-    '    float pk = (head * 1.6 + trail * 0.9 + halo) * k.z;',
-    '    col += mix(AMBER, vec3(1.0, 0.92, 0.75), head) * pk; a += pk;',
-    '  }',
-    '  for (int i = 0; i < 4; i++) {',
-    '    vec4 r = uRp[i]; if (r.w <= 0.0) continue;',
-    '    float age = r.z;',
-    '    vec2 q = vec2((p.x - r.x) / (26.0 + 70.0 * age), (p.y - r.y) / (70.0 + 420.0 * age));',
-    '    float rd = length(q);',
-    '    float bb = (rd - 1.0) * 5.0; float band = exp(-bb * bb) * (1.0 - smoothstep(0.96, 1.02, abs(fx)));',
-    '    float hex = 0.6 + 0.4 * sin(p.y * 0.22) * sin(p.x * 0.19 + p.y * 0.11);',
-    '    float flash = exp(-rd * rd * 3.0) * pow(1.0 - age, 6.0);',
-    '    float rk2 = (band * hex * pow(1.0 - age, 1.6) + flash) * r.w;',
-    '    col += mix(AMBER, AQUA, smoothstep(0.0, 0.35, age)) * rk2; a += rk2;',
-    '  }',
-    '  a = clamp(a, 0.0, 1.0);',
-    '  gl_FragColor = vec4(min(col, vec3(1.0)), a);',
+    '  col += fx * uOn;',
+    '  float g = hash(floor(f.x * uRes.x) * 0.731 + floor(f.y * uRes.y) * 1.37 + fract(uTime * 0.37) * 91.0) - 0.5;',
+    '  col += g * uGrain;',
+    '  gl_FragColor = vec4(min(col, vec3(1.0)), 1.0);',
     '}'
   ].join('\n');
-  function initFx() {
-    if (!fxCanvas) return;
-    try { gl = fxCanvas.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false, powerPreference: 'low-power' }); } catch (e) { gl = null; }
+  function makeTex() {
+    var t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return t;
+  }
+  function loadTex(url, tex, done) {
+    var im = new Image(); im.decoding = 'async';
+    im.onload = function () { if (!gl) return; gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); done(); if (!running) renderStatic(); };
+    im.src = url;
+  }
+  function initGl() {
+    if (!glCanvas) return;
+    try { gl = glCanvas.getContext('webgl', { premultipliedAlpha: false, alpha: false, antialias: false, powerPreference: 'low-power' }); } catch (e) { gl = null; }
     if (!gl) return;
     function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; }
-    var vs = sh(gl.VERTEX_SHADER, 'attribute vec2 aP; void main(){ gl_Position = vec4(aP, 0.0, 1.0); }'), fs = sh(gl.FRAGMENT_SHADER, FX_FS);
+    var vs = sh(gl.VERTEX_SHADER, 'attribute vec2 aP; void main(){ gl_Position = vec4(aP, 0.0, 1.0); }'), fs = sh(gl.FRAGMENT_SHADER, GL_FS);
     if (!vs || !fs) { gl = null; return; }
-    fxProg = gl.createProgram(); gl.attachShader(fxProg, vs); gl.attachShader(fxProg, fs); gl.linkProgram(fxProg);
-    if (!gl.getProgramParameter(fxProg, gl.LINK_STATUS)) { gl = null; return; }
-    gl.useProgram(fxProg);
+    prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { gl = null; return; }
+    gl.useProgram(prog);
     var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    var loc = gl.getAttribLocation(fxProg, 'aP'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    ['uRes', 'uReg', 'uTime', 'uOn', 'uPulse', 'uPk', 'uRp'].forEach(function (n) { fxU[n] = gl.getUniformLocation(fxProg, n); });
-    gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    fxOk = true;
+    var loc = gl.getAttribLocation(prog, 'aP'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    ['uRes', 'uImg', 'uPar', 'uVidMap', 'uTex', 'uVid', 'uDep', 'uUseVid', 'uUseDep', 'uFocus', 'uTime', 'uOn', 'uPulse', 'uGrain', 'uFxLeft', 'uField', 'uRing', 'uPk', 'uRp'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    texStill = makeTex(); texDep = makeTex(); texVid = makeTex();
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texStill); gl.uniform1i(U.uTex, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texVid); gl.uniform1i(U.uVid, 1);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, texDep); gl.uniform1i(U.uDep, 2);
+    gl.uniform2f(U.uImg, IW, IH);
+    gl.uniform2f(U.uVidMap, VIDEO_MAP.top / IH, VIDEO_MAP.height / IH);
+    gl.uniform1f(U.uFocus, PLATE.focus); gl.uniform1f(U.uFxLeft, PLATE.fx.left);
+    gl.uniform4f(U.uField, PLATE.field.cx, PLATE.field.hw, PLATE.field.top, PLATE.field.bottom);
+    gl.uniform4f(U.uRing, PLATE.ring.cx, PLATE.ring.cy, PLATE.ring.rx, PLATE.ring.ry);
+    stillReady = depReady = vidTexReady = false;
+    gl.activeTexture(gl.TEXTURE0);
+    loadTex(coarse ? PLATE.srcSmall || PLATE.src : PLATE.src, texStill, function () { stillReady = true; plate.classList.add('gl-on'); });
+    gl.activeTexture(gl.TEXTURE2);
+    loadTex(PLATE.depth, texDep, function () { depReady = true; });
+    glOk = true;
   }
-  function layoutFx() {
-    if (!fxCanvas) return;
-    var a = toPlate([FX_REGION.x0, FX_REGION.y0]), b = toPlate([FX_REGION.x1, FX_REGION.y1]);
-    var l = Math.max(0, a[0]), t = Math.max(0, a[1]), r = Math.min(L.pw, b[0]), btm = Math.min(L.ph, b[1]);
-    var w = Math.max(1, r - l), h = Math.max(1, btm - t);
-    var pr = Math.min(window.devicePixelRatio || 1, 1.25);
-    fxCanvas.style.cssText = 'left:' + l + 'px;top:' + t + 'px;width:' + w + 'px;height:' + h + 'px';
-    var fw = Math.round(w * pr), fh = Math.round(h * pr);
-    if (fxCanvas.width !== fw || fxCanvas.height !== fh) { fxCanvas.width = fw; fxCanvas.height = fh; }
-    L.fxReg = [(l - L.ox) / L.s, (t - L.oy) / L.s, (r - L.ox) / L.s, (btm - L.oy) / L.s];
-    if (gl) gl.viewport(0, 0, fxCanvas.width, fxCanvas.height);
+  function layoutGl() {
+    if (!glCanvas || !gl) return;
+    var pr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 1.25);
+    var w = Math.round(IW * L.s * pr), h = Math.round(IH * L.s * pr);
+    if (glCanvas.width !== w || glCanvas.height !== h) { glCanvas.width = w; glCanvas.height = h; }
+    gl.viewport(0, 0, w, h);
+  }
+
+  function drawGl(t, on, parX, parY) {
+    if (!glOk || !stillReady) return;
+    var useVid = videoLive && video.readyState >= 2 && !document.hidden;
+    if (useVid) {
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texVid);
+      try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video); vidTexReady = true; } catch (e) { useVid = false; }
+    }
+    gl.uniform2f(U.uRes, glCanvas.width, glCanvas.height);
+    gl.uniform1f(U.uUseVid, useVid && vidTexReady ? 1 : 0); gl.uniform1f(U.uUseDep, depReady ? 1 : 0);
+    gl.uniform2f(U.uPar, parX, parY);
+    gl.uniform1f(U.uTime, t); gl.uniform1f(U.uOn, on); gl.uniform1f(U.uPulse, ringPulse);
+    gl.uniform1f(U.uGrain, reduceMotion ? 0.0 : 0.028);
+    gl.uniform4fv(U.uPk, pkBuf); gl.uniform4fv(U.uRp, rpBuf);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
   /* ---------- atacuri: vin din întuneric, lovesc câmpul, sunt blocate ---------- */
   function launchAttack(lane) {
     if (packets.length >= MAXP) return;
     if (!lane) lane = Math.random() < 0.5 ? 'up' : 'low';
-    var from, to;
-    if (lane === 'up') { from = [1060 + Math.random() * 80, 20 + Math.random() * 120]; to = [1356, 250 + Math.random() * 120]; }
-    else { from = [1180 + Math.random() * 60, 1240 + Math.random() * 150]; to = [1352, 950 + Math.random() * 250]; }
-    var ctrl = [(from[0] + to[0]) / 2 + 40, (from[1] + to[1]) / 2 + (lane === 'up' ? -70 : 70)];
+    var ln = PLATE.lanes[lane] || PLATE.lanes.up, up = lane === 'up';
+    var from = [ln[0][0] + Math.random() * 80, ln[0][1] + Math.random() * 120], to = [ln[1][0], ln[1][1] + Math.random() * (up ? 120 : 250)];
+    var ctrl = [(from[0] + to[0]) / 2 + 40, (from[1] + to[1]) / 2 + (up ? -70 : 70)];
     packets.push({ from: from, to: to, ctrl: ctrl, t: 0, dur: 0.95 + Math.random() * 0.4 });
   }
   var pkBuf = new Float32Array(16), rpBuf = new Float32Array(16);
@@ -455,25 +579,17 @@
     for (i = 0; i < ripples.length; i++) { rpBuf[i * 4] = ripples[i].x; rpBuf[i * 4 + 1] = ripples[i].y; rpBuf[i * 4 + 2] = ripples[i].age; rpBuf[i * 4 + 3] = 1; }
     ringPulse = Math.max(0, ringPulse - dt * 1.4);
   }
-  function drawFx(t, on) {
-    if (!fxOk || !L.fxReg) return;
-    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.uniform2f(fxU.uRes, fxCanvas.width, fxCanvas.height);
-    gl.uniform4f(fxU.uReg, L.fxReg[0], L.fxReg[1], L.fxReg[2], L.fxReg[3]);
-    gl.uniform1f(fxU.uTime, t); gl.uniform1f(fxU.uOn, on); gl.uniform1f(fxU.uPulse, ringPulse);
-    gl.uniform4fv(fxU.uPk, pkBuf); gl.uniform4fv(fxU.uRp, rpBuf);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-  }
 
-  /* ---------- video: aceeași scenă, cu fluxuri de date și ceață (buclă perfectă, cameră fixă) ---------- */
-  var videoWanted = false, imgHideT = 0;
+  /* ---------- video: aceeași scenă, cameră fixă, buclă perfectă; devine textură în WebGL ---------- */
+  var videoWanted = false, videoLive = false;
   function initVideo() {
-    if (!video || reduceMotion || saveData) return;
+    if (!video || reduceMotion || saveData || videoWanted) return;
     videoWanted = true;
     video.muted = true; video.loop = true; video.playsInline = true; video.setAttribute('playsinline', '');
-    video.addEventListener('playing', function () { plate.classList.add('video-on'); clearTimeout(imgHideT); imgHideT = setTimeout(function () { plate.classList.add('video-ready'); }, 1700); });
-    video.addEventListener('error', function () { clearTimeout(imgHideT); plate.classList.remove('video-on', 'video-ready'); videoWanted = false; });
-    video.src = window.innerWidth > 900 ? 'assets/hero/plate-loop-1920.mp4' : 'assets/hero/plate-loop-1280.mp4';
+    video.addEventListener('playing', function () { videoLive = true; plate.classList.add('video-on'); });
+    video.addEventListener('pause', function () { videoLive = false; });
+    video.addEventListener('error', function () { videoLive = false; videoWanted = false; plate.classList.remove('video-on'); });
+    video.src = L.compact ? VIDEO_MAP.n : VIDEO_MAP.w;
     syncVideo();
   }
   function syncVideo() {
@@ -481,7 +597,6 @@
     if (heroVisible && !document.hidden && !reduceMotion && !userPaused) { var p = video.play(); if (p && p.catch) p.catch(function () {}); }
     else if (!video.paused) video.pause();
   }
-
   /* ---------- câmpul de particule al paginii (#scene, în spatele conținutului) ---------- */
   var pg = null, pgU = {}, pgN = 0, sceneCanvas = document.getElementById('scene');
   function initParticles() {
@@ -526,12 +641,13 @@
     pg.drawArrays(pg.POINTS, 0, pgN);
   }
 
+
   /* =====================================================================
      Buclă, interacțiune, ciclu de viață
      ===================================================================== */
   var heroVisible = true, running = false, rafId = 0, last = 0, t0 = performance.now(), bootAt = -1;
-  var mouse = { x: 0, y: 0 }, smooth = { x: 0, y: 0 }, nextAttack = 3.2, holoAcc = 1, lastPar = '';
-  var pageFade = reduceMotion ? 1 : 0, partAcc = 1, fxAcc = 1, MIN_GAP = 1000 / 62;
+  var mouse = { x: 0, y: 0 }, smooth = { x: 0, y: 0 }, nextAttack = 3.2, holoAcc = 1, lastWorld = '';
+  var pageFade = reduceMotion ? 1 : 0, partAcc = 1, glAcc = 1, MIN_GAP = 1000 / 62;
   window.addEventListener('pointermove', function (e) {
     if (e.pointerType === 'touch') return;
     mouse.x = e.clientX / window.innerWidth * 2 - 1; mouse.y = e.clientY / window.innerHeight * 2 - 1;
@@ -546,19 +662,21 @@
     if (partAcc >= 1 / 30 || !running) { partAcc = 0; drawParticles(t, pageFade); }
     if (heroVisible) {
       var bt = bootAt < 0 ? 0 : t - bootAt;
+      var still = reduceMotion || userPaused;
       var sp = clamp(((window.scrollY || 0) - (L.heroTop || 0)) / Math.max(1, L.heroH || 1), 0, 1);
-      var k = 1 - Math.exp(-dt * 3.2);
+      var k = 1 - Math.exp(-dt * 2.6);
       smooth.x += (mouse.x - smooth.x) * k; smooth.y += (mouse.y - smooth.y) * k;
-      var px = L.compact ? 0 : -smooth.x * 12, py = (L.compact ? 0 : -smooth.y * 8) + sp * 70;
-      var par = px.toFixed(2) + ',' + py.toFixed(2) + ',' + sp.toFixed(3);
-      if (par !== lastPar) {
-        lastPar = par;
-        world.style.transform = 'translate3d(' + px.toFixed(2) + 'px,' + py.toFixed(2) + 'px,0) scale(' + (1 + sp * 0.04).toFixed(4) + ')';
-        var hx = L.compact ? 0 : -smooth.x * 3, hy = L.compact ? 0 : -smooth.y * 2;
-        SCREENS.forEach(function (sc) { placeScreen(sc, hx, hy); });
-      }
-      if (bootAt >= 0 && !reduceMotion) {
-        if (bt > nextAttack) { launchAttack(); nextAttack = bt + 2.8 + Math.random() * 2.6; }
+      /* camera: derivă lentă (zoom + translație pe două frecvențe) + răspuns calm la mouse + coregrafie la scroll */
+      var zoom = still ? 1 : 1.012 + 0.012 * Math.sin(t * 0.17) + 0.006 * Math.sin(t * 0.071 + 1.3);
+      var wx = still ? 0 : Math.sin(t * 0.11) * 5 + Math.sin(t * 0.043 + 2.0) * 3 + (L.compact ? 0 : -smooth.x * 10);
+      var wy = (still ? 0 : Math.cos(t * 0.09) * 4 + (L.compact ? 0 : -smooth.y * 7)) + sp * 70;
+      var wk = wx.toFixed(1) + ',' + wy.toFixed(1) + ',' + (zoom + sp * 0.04).toFixed(4);
+      if (wk !== lastWorld) { lastWorld = wk; world.style.transform = 'translate3d(' + wx.toFixed(1) + 'px,' + wy.toFixed(1) + 'px,0) scale(' + (zoom + sp * 0.04).toFixed(4) + ')'; }
+      /* paralaxă de adâncime (UV): mouse + o derivă proprie, ca scena să „respire” și fără cursor */
+      var parX = still ? 0 : (L.compact ? 0 : -smooth.x * 0.011) + Math.sin(t * 0.21) * 0.0035 + Math.sin(t * 0.083 + 0.7) * 0.002;
+      var parY = still ? 0 : (L.compact ? 0 : -smooth.y * 0.006) + Math.cos(t * 0.16) * 0.002;
+      if (bootAt >= 0 && !still) {
+        if (bt > nextAttack) { launchAttack(); nextAttack = bt + 2.4 + Math.random() * 2.2; }
         stepAttacks(dt);
       }
       /* ecranele: 30 fps sunt suficiente pentru text și cifre */
@@ -567,13 +685,13 @@
         var hdt = holoAcc; holoAcc = 0;
         SCREENS.forEach(function (sc, i) {
           if (!sc.ctx) return;
-          sc.on = reduceMotion ? 1 : clamp((bt - 0.45 - i * 0.35) / 0.9, 0, 1);
+          sc.on = still ? 1 : clamp((bt - 0.45 - i * 0.35) / 0.9, 0, 1);
           if (sc.on <= 0) { sc.ctx.setTransform(1, 0, 0, 1, 0, 0); sc.ctx.clearRect(0, 0, sc.el.width, sc.el.height); return; }
-          if (i === 0) drawMain(sc, bt, hdt); else if (i === 1) drawMid(sc, bt); else drawSmall(sc, bt);
+          if (i === 0) drawMain(sc, bt, hdt); else drawSmall(sc, bt);
         });
       }
-      fxAcc += dt;
-      if (!coarse || fxAcc >= 1 / 30 || !running) { fxAcc = 0; drawFx(t, (reduceMotion ? 1 : ease((bt - 0.2) / 1.6)) * (1 - sp * 0.9)); }
+      glAcc += dt;
+      if (!coarse || glAcc >= 1 / 30 || !running) { glAcc = 0; drawGl(t, (still ? 1 : ease((bt - 0.2) / 1.6)) * (1 - sp * 0.9), parX, parY); }
     }
     if (running) rafId = requestAnimationFrame(frame);
   }
@@ -589,7 +707,7 @@
   }
   function renderStatic() {
     var now = performance.now();
-    if (reduceMotion) { packets.length = 0; ripples.length = 0; pkBuf.fill(0); rpBuf.fill(0); ringPulse = 0; }
+    if (reduceMotion || userPaused) { packets.length = 0; ripples.length = 0; pkBuf.fill(0); rpBuf.fill(0); ringPulse = 0; }
     last = now; SCREENS.forEach(function (sc) { sc.on = 1; });
     holoAcc = 1; frame(now);
   }
@@ -608,9 +726,9 @@
   plate.addEventListener('click', function (e) {
     if (reduceMotion || userPaused || bootAt < 0) return;
     var pr = plate.getBoundingClientRect(), iy = (e.clientY - pr.top - L.oy) / L.s;
-    launchAttack(iy < 700 ? 'up' : 'low');
+    launchAttack(iy < PLATE.anchor[1] ? 'up' : 'low');
   });
-  plate.addEventListener('pointerenter', function () { var c = window.mdy && window.mdy.cursor; if (c && !reduceMotion) if (!userPaused) c.set('Testează firewall-ul'); });
+  plate.addEventListener('pointerenter', function () { var c = window.mdy && window.mdy.cursor; if (c && !reduceMotion && !userPaused) c.set('Testează firewall-ul'); });
   plate.addEventListener('pointerleave', function () { var c = window.mdy && window.mdy.cursor; if (c) c.clear(); });
 
   if ('IntersectionObserver' in window) {
@@ -620,15 +738,15 @@
   var rsT = 0;
   window.addEventListener('resize', function () { clearTimeout(rsT); rsT = setTimeout(function () { layout(); sizeParticles(); if (reduceMotion) renderStatic(); }, 80); });
   var mq = matchMedia('(prefers-reduced-motion: reduce)');
-  if (mq.addEventListener) mq.addEventListener('change', function (e) { reduceMotion = e.matches; if (!reduceMotion && !videoWanted) initVideo(); setInteractive(); sync(); });
+  if (mq.addEventListener) mq.addEventListener('change', function (e) { reduceMotion = e.matches; if (!reduceMotion) initVideo(); setInteractive(); sync(); });
 
   /* ---------- pornire ---------- */
   initParticles();
-  initFx();
-  /* context WebGL pierdut (driver resetat, tab în fundal pe mobil): se reface la restaurare */
-  if (fxCanvas) {
-    fxCanvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); fxOk = false; });
-    fxCanvas.addEventListener('webglcontextrestored', function () { initFx(); layoutFx(); if (!running) renderStatic(); });
+  initGl();
+  /* context WebGL pierdut (driver resetat, tab în fundal pe mobil): fotografia rămâne vizibilă, se reface la restaurare */
+  if (glCanvas) {
+    glCanvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); glOk = false; plate.classList.remove('gl-on'); });
+    glCanvas.addEventListener('webglcontextrestored', function () { initGl(); layoutGl(); if (!running) renderStatic(); });
   }
   if (sceneCanvas) {
     sceneCanvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); pg = null; });
@@ -640,7 +758,7 @@
   }
   if (pauseBtn) { pauseBtn.setAttribute('aria-pressed', userPaused ? 'true' : 'false'); pauseBtn.textContent = userPaused ? 'Pornește animația' : 'Pauză animație'; }
   setInteractive();
-  if (pg || fxOk) { root.classList.remove('no-webgl'); root.classList.add('has-webgl'); }
+  if (pg || glOk) { root.classList.remove('no-webgl'); root.classList.add('has-webgl'); }
   else root.classList.add('no-webgl');
   layout();
   if (img && !img.complete) img.addEventListener('load', layout, { once: true });
@@ -660,6 +778,6 @@
   window.mdyHero = {
     attack: launchAttack, layout: layout, stop: stop, start: start,
     render: function () { frame(performance.now()); },
-    info: function () { return { s: L.s, ox: L.ox, oy: L.oy, pw: L.pw, ph: L.ph, compact: L.compact, fx: fxOk, particles: !!pg, video: videoWanted && !video.paused, blocked: soc.blocked, screens: SCREENS.map(function (sc) { return [sc.key, Math.round(sc.w), Math.round(sc.h), sc.on]; }) }; }
+    info: function () { return { s: L.s, ox: L.ox, oy: L.oy, pw: L.pw, ph: L.ph, compact: L.compact, gl: glOk, still: stillReady, depth: depReady, particles: !!pg, video: videoLive, blocked: soc.blocked, screens: SCREENS.map(function (sc) { return [sc.key, Math.round(sc.w), Math.round(sc.h), sc.on]; }) }; }
   };
 })();

@@ -16,6 +16,31 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 
 ## Journal — newest first
 
+### 2026-09-16 — „Ecosistemul MDY”: câte un clip 3D pentru fiecare zonă
+
+- Cererea clientului (prin Flavius): imaginea lui cu panglica în trei zone (Soluții
+  Software / Arhitectură & Integrare / Date & Tehnologie) să devină „câte una pentru
+  fiecare zonă, dinamică, să se schimbe” — și nu imagini statice, ci clipuri 3D.
+- Secțiune nouă `#ecosistem` (înainte de `#solutii`): o scenă mare care rulează pe rând
+  cele cinci zone (cele trei ale clientului + Cyber Security + Managed IT & Suport).
+  Fiecare zonă are poster WebP (1600px) și o buclă video de 6 s cu cameră fixă;
+  textul (titlu, descriere, tag-uri) e HTML, deci rămâne clar și editabil.
+- `zones.js`: rotire automată la 7 s cu bară de progres pe tab, pauză la hover/focus,
+  tab-uri cu role="tab" și navigare cu săgeți, se încarcă doar clipul zonei active plus
+  următoarea, pauză când secțiunea nu e vizibilă sau fila e ascunsă, respectă
+  prefers-reduced-motion și Save-Data (rămâne posterul). Debug: `mdyZones.info()`.
+- Media: imagini Nano Banana Pro 2K (2 credite fiecare), clipuri MiniMax H3 6 s 2K
+  (12 credite fiecare, unul pe rând — modelul dă 429 dacă rulează deja un job),
+  recodate la 1280 și 854 px (≈0,4–0,6 MB și ≈0,13–0,18 MB).
+- Fixuri din revizia v2 aplicate în același timp: unitatea de textură pentru harta de
+  adâncime se alege în `onload` (altfel imaginea care se încărca ultima ajungea pe
+  unitatea greșită și paralaxa urmărea luminozitatea), rezervă de margine dreaptă
+  pentru deriva camerei, `--shade-end` ține cont de marginea textului, toleranță la
+  limitarea de cadre (75/90/144 Hz nu mai cădeau la jumătate).
+- Unealtă nouă: `%LOCALAPPDATA%\Temp\mdy-imgtool\shot.js` — Chrome headless condus prin
+  DevTools Protocol, derulează la un selector și face captura (panoul intern nu
+  repictează secțiunile DOM când fila e ascunsă).
+
 ### 2026-09-16 — hero „Sentinel” v2: mai mic, mai realist, cu paralaxă de adâncime
 
 - Feedback (Flavius): "e puțin cam mare, nu are zonă dinamică mai deloc, fă-l mai

@@ -94,7 +94,8 @@
       paneL = Math.max(copyR + 28, pw * 0.4);
       ox = paneL - leftL * s;
       if (ox + cab[2] * s > pw - 16) ox = pw - 16 - cab[2] * s;          /* serverul rămâne întreg în cadru */
-      if (ox + IW * s < pw) { s = Math.max(s, (pw - ox) / IW); }          /* fotografia acoperă marginea dreaptă */
+      /* fotografia acoperă marginea dreaptă, cu rezervă pentru deriva camerei */
+      if (ox + IW * s < pw + 26) { s = Math.max(s, OVER * (pw + 26 - ox) / IW); ox = Math.min(ox, paneL - leftL * s); }
       oy = IH * s >= ph ? clamp(ph / 2 - PLATE.anchor[1] * s, ph - IH * s, 0) : (ph - IH * s) / 2;
     } else {
       var pc = PLATE.phoneCrop, sceneC = (pc[0] + pc[2]) / 2, sceneY = (pc[1] + pc[3]) / 2;
@@ -106,7 +107,7 @@
         s = Math.max(0.9 * ph / IH, pw / IW, 0.6 * ph / (cab[3] - cab[1]));
         sceneC = (mainL + cab[2]) / 2 - 10; sceneY = PLATE.anchor[1] - 40;
       }
-      if (IW * s < pw) s = pw / IW;
+      if (IW * s < pw) s = OVER * pw / IW;
       ox = clamp(pw / 2 - sceneC * s, pw - IW * s, 0);
       oy = IH * s >= ph ? clamp(ph / 2 - sceneY * s, ph - IH * s, 0) : (ph - IH * s) / 2;
     }
@@ -124,8 +125,8 @@
     L.heroTop = hero.getBoundingClientRect().top + (window.scrollY || 0); L.heroH = hero.offsetHeight;
     var a = toPlate(PLATE.anchor);
     world.style.transformOrigin = a[0].toFixed(1) + 'px ' + a[1].toFixed(1) + 'px';
-    plate.style.setProperty('--shade-end', Math.round(compact ? 0 : (ox + leftL * s) - 24) + 'px');
     L.textR = compact ? 0 : copyR;
+    plate.style.setProperty('--shade-end', Math.round(compact ? 0 : Math.max((ox + leftL * s) - 24, L.textR + 26)) + 'px');
     plate.classList.add('is-laid');
     layoutPanes();
     layoutGl();
@@ -488,9 +489,16 @@
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     return t;
   }
-  function loadTex(url, tex, done) {
+  /* unitatea de textură se alege în onload: altfel imaginea care se încarcă ultima
+     ajunge pe unitatea activă rămasă și harta de adâncime se pierde */
+  function loadTex(url, tex, unit, done) {
     var im = new Image(); im.decoding = 'async';
-    im.onload = function () { if (!gl) return; gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); done(); if (!running) renderStatic(); };
+    im.onload = function () {
+      if (!gl) return;
+      gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im);
+      done(); if (!running) renderStatic();
+    };
     im.src = url;
   }
   function initGl() {
@@ -519,10 +527,8 @@
     gl.uniform4f(U.uField, PLATE.field.cx, PLATE.field.hw, PLATE.field.top, PLATE.field.bottom);
     gl.uniform4f(U.uRing, PLATE.ring.cx, PLATE.ring.cy, PLATE.ring.rx, PLATE.ring.ry);
     stillReady = depReady = vidTexReady = false;
-    gl.activeTexture(gl.TEXTURE0);
-    loadTex(coarse ? PLATE.srcSmall || PLATE.src : PLATE.src, texStill, function () { stillReady = true; plate.classList.add('gl-on'); });
-    gl.activeTexture(gl.TEXTURE2);
-    loadTex(PLATE.depth, texDep, function () { depReady = true; });
+    loadTex(coarse ? PLATE.srcSmall || PLATE.src : PLATE.src, texStill, 0, function () { stillReady = true; plate.classList.add('gl-on'); });
+    loadTex(PLATE.depth, texDep, 2, function () { depReady = true; });
     glOk = true;
   }
   function layoutGl() {
@@ -648,7 +654,7 @@
      ===================================================================== */
   var heroVisible = true, running = false, rafId = 0, last = 0, t0 = performance.now(), bootAt = -1;
   var mouse = { x: 0, y: 0 }, smooth = { x: 0, y: 0 }, nextAttack = 3.2, holoAcc = 1, lastWorld = '';
-  var pageFade = reduceMotion ? 1 : 0, partAcc = 1, glAcc = 1, MIN_GAP = 1000 / 62;
+  var pageFade = reduceMotion ? 1 : 0, partAcc = 1, glAcc = 1, MIN_GAP = 1000 / 62 - 4;   /* toleranță: 75/90/144 Hz nu cad la jumătate */
   window.addEventListener('pointermove', function (e) {
     if (e.pointerType === 'touch') return;
     mouse.x = e.clientX / window.innerWidth * 2 - 1; mouse.y = e.clientY / window.innerHeight * 2 - 1;

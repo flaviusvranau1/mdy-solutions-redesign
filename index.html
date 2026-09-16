@@ -139,6 +139,80 @@
     </div>
   </section>
 
+  <!-- ======================= ECOSISTEM (zone) ======================= -->
+  <section class="section zones" id="ecosistem">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Ecosistemul MDY</p>
+        <h2>Trei zone, <span class="text-gradient">un singur sistem</span></h2>
+        <p class="lead">Software, arhitectură și date lucrează împreună, pe o infrastructură administrată și securizată. Alege o zonă sau lasă-le să ruleze.</p>
+      </div>
+      <div class="zones-stage">
+        <div class="zones-media">
+          <div class="zone-media is-active" data-zone="software">
+            <img src="assets/zones/software.webp" width="1600" height="900" alt="" loading="lazy" decoding="async">
+            <video muted loop playsinline preload="none" aria-hidden="true" data-src="assets/zones/software-1280.mp4" data-small="assets/zones/software-854.mp4"></video>
+          </div>
+          <div class="zone-media" data-zone="arhitectura">
+            <img src="assets/zones/arhitectura.webp" width="1600" height="900" alt="" loading="lazy" decoding="async">
+            <video muted loop playsinline preload="none" aria-hidden="true" data-src="assets/zones/arhitectura-1280.mp4" data-small="assets/zones/arhitectura-854.mp4"></video>
+          </div>
+          <div class="zone-media" data-zone="date">
+            <img src="assets/zones/date.webp" width="1600" height="900" alt="" loading="lazy" decoding="async">
+            <video muted loop playsinline preload="none" aria-hidden="true" data-src="assets/zones/date-1280.mp4" data-small="assets/zones/date-854.mp4"></video>
+          </div>
+          <div class="zone-media" data-zone="security">
+            <img src="assets/zones/security.webp" width="1600" height="900" alt="" loading="lazy" decoding="async">
+            <video muted loop playsinline preload="none" aria-hidden="true" data-src="assets/zones/security-1280.mp4" data-small="assets/zones/security-854.mp4"></video>
+          </div>
+          <div class="zone-media" data-zone="managed">
+            <img src="assets/zones/managed.webp" width="1600" height="900" alt="" loading="lazy" decoding="async">
+            <video muted loop playsinline preload="none" aria-hidden="true" data-src="assets/zones/managed-1280.mp4" data-small="assets/zones/managed-854.mp4"></video>
+          </div>
+        </div>
+        <div class="zones-cards">
+          <article class="zone-card is-active" data-zone="software">
+            <svg class="zone-icon" aria-hidden="true"><use href="#i-code"/></svg>
+            <h3>Soluții Software</h3>
+            <p>Dezvoltăm și implementăm soluții software adaptate proceselor tale, de la ERP la portale pentru clienți.</p>
+            <ul class="zone-tags"><li>ERP</li><li>CRM</li><li>WMS</li><li>Portale</li></ul>
+          </article>
+          <article class="zone-card" data-zone="arhitectura" hidden>
+            <svg class="zone-icon" aria-hidden="true"><use href="#i-nodes"/></svg>
+            <h3>Arhitectură &amp; Integrare</h3>
+            <p>Conectăm sisteme, procese și echipe într-un ecosistem unitar și sigur, cu date care circulă fără copy-paste.</p>
+            <ul class="zone-tags"><li>Cloud</li><li>API</li><li>Rețea</li><li>Infrastructură</li></ul>
+          </article>
+          <article class="zone-card" data-zone="date" hidden>
+            <svg class="zone-icon" aria-hidden="true"><use href="#i-spark"/></svg>
+            <h3>Date &amp; Tehnologie</h3>
+            <p>Transformăm datele în decizii: rapoarte clare, automatizări și monitorizare, în loc de fișiere separate.</p>
+            <ul class="zone-tags"><li>BI &amp; Analytics</li><li>AI</li><li>Automatizare</li><li>Monitoring</li></ul>
+          </article>
+          <article class="zone-card" data-zone="security" hidden>
+            <svg class="zone-icon" aria-hidden="true"><use href="#i-shield"/></svg>
+            <h3>Cyber Security</h3>
+            <p>Prevenim, detectăm și oprim incidentele: perimetru, stații, e-mail și copii de siguranță testate.</p>
+            <ul class="zone-tags"><li>SOC</li><li>Firewall</li><li>EDR</li><li>Audit</li></ul>
+          </article>
+          <article class="zone-card" data-zone="managed" hidden>
+            <svg class="zone-icon" aria-hidden="true"><use href="#i-support"/></svg>
+            <h3>Managed IT &amp; Suport</h3>
+            <p>Administrăm infrastructura zi de zi, cu monitorizare continuă, helpdesk și timpi de răspuns asumați.</p>
+            <ul class="zone-tags"><li>Monitorizare</li><li>Helpdesk</li><li>Backup</li><li>Consultanță</li></ul>
+          </article>
+        </div>
+      </div>
+      <div class="zone-tabs" role="tablist" aria-label="Zonele ecosistemului MDY">
+        <button class="zone-tab is-active" type="button" role="tab" aria-selected="true" data-zone="software">Soluții Software<i class="zone-tab-bar"></i></button>
+        <button class="zone-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-zone="arhitectura">Arhitectură &amp; Integrare<i class="zone-tab-bar"></i></button>
+        <button class="zone-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-zone="date">Date &amp; Tehnologie<i class="zone-tab-bar"></i></button>
+        <button class="zone-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-zone="security">Cyber Security<i class="zone-tab-bar"></i></button>
+        <button class="zone-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-zone="managed">Managed IT &amp; Suport<i class="zone-tab-bar"></i></button>
+      </div>
+    </div>
+  </section>
+
   <!-- ======================= SOLUȚII ======================= -->
   <section class="section" id="solutii">
     <div class="container">
@@ -637,5 +711,6 @@
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
 <script src="main.js"></script>
 <script src="hero.js"></script>
+<script src="zones.js"></script>
 </body>
 </html>

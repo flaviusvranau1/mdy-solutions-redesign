@@ -163,6 +163,53 @@ html.menu-open .nav-burger span:nth-child(1) { transform: translate(-50%, -50%) 
 html.menu-open .nav-burger span:nth-child(2) { opacity: 0; }
 html.menu-open .nav-burger span:nth-child(3) { transform: translate(-50%, -50%) rotate(-45deg); }
 
+/* ---------- ecosistem: câte un clip pentru fiecare zonă ---------- */
+.zones-stage { position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--bg-2); aspect-ratio: 1.85; }
+.zones-media { position: absolute; inset: 0; }
+.zone-media { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s var(--ease-out); }
+.zone-media.is-active { opacity: 1; }
+.zone-media img, .zone-media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.zone-media video { opacity: 0; transition: opacity 0.8s var(--ease-out); }
+.zone-media.is-playing video { opacity: 1; }
+.zone-media.is-active img { animation: zoneDrift 18s var(--ease-out) both; }
+@keyframes zoneDrift { from { transform: scale(1.02); } to { transform: scale(1.07); } }
+.zones-stage::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, var(--bg) 0, rgba(5, 17, 29, 0.86) 34%, rgba(5, 17, 29, 0) 62%), linear-gradient(180deg, rgba(5, 17, 29, 0.35) 0, rgba(5, 17, 29, 0) 40%);
+}
+.zones-cards { position: absolute; inset: 0; z-index: 2; display: grid; align-content: center; padding: clamp(20px, 4vw, 54px); pointer-events: none; }
+.zone-card { max-width: 30rem; }
+.zone-card.is-active { animation: zoneIn 0.7s var(--ease-out) both; }
+@keyframes zoneIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.zone-icon { width: 42px; height: 42px; color: var(--glow); margin-bottom: 14px; }
+.zone-card h3 { font-size: clamp(1.5rem, 2.6vw, 2.3rem); margin-bottom: 0.7rem; }
+.zone-card p { color: var(--ink-2); font-size: clamp(0.94rem, 1.1vw, 1.06rem); line-height: 1.6; }
+.zone-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 1.1rem 0 0; padding: 0; list-style: none; }
+.zone-tags li { font: 600 0.74rem/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--glow); padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(8, 30, 48, 0.6); }
+.zone-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.zone-tab {
+  position: relative; overflow: hidden; flex: 1 1 180px; text-align: left; padding: 13px 16px; border-radius: 14px;
+  border: 1px solid var(--line); background: rgba(10, 26, 43, 0.5); color: var(--ink-2);
+  font: 600 0.8rem/1.2 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase;
+  transition: color 0.3s, border-color 0.3s, background 0.3s;
+}
+.zone-tab:hover { color: var(--ink); border-color: var(--line-2); }
+.zone-tab.is-active { color: var(--ink); border-color: rgba(143, 247, 247, 0.45); background: rgba(16, 36, 58, 0.8); }
+.zone-tab-bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; transform: scaleX(0); transform-origin: left center; background: linear-gradient(90deg, var(--accent), var(--glow)); }
+.zone-tab:not(.is-active) .zone-tab-bar { opacity: 0; }
+@media (max-width: 900px) {
+  .zones-stage { aspect-ratio: 1.05; }
+  .zones-stage::after { background: linear-gradient(180deg, rgba(5, 17, 29, 0.12) 0, rgba(5, 17, 29, 0.42) 46%, rgba(5, 17, 29, 0.96) 88%); }
+  .zones-cards { align-content: end; }
+  .zone-card { max-width: none; }
+  .zone-tabs { gap: 8px; }
+  .zone-tab { flex: 1 1 140px; padding: 11px 12px; font-size: 0.72rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zone-media.is-active img { animation: none; }
+  .zone-card.is-active { animation: none; }
+}
+
 /* ---------- hero ---------- */
 .hero { position: relative; min-height: 92svh; display: grid; align-items: center; padding: clamp(120px, 15vh, 170px) 0 clamp(50px, 7vh, 96px); overflow: hidden; }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr); gap: 28px; align-items: center; }

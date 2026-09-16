@@ -41,6 +41,7 @@
     },
     anchor: [1700, 760],                     /* centrul de interes (originea zoom-ului lent) */
     cabinet: [1420, 200, 2000, 1240],        /* dreptunghiul serverului: x0, y0, x1, y1 */
+    phoneCrop: [1040, 60, 2070, 1370],       /* ce se vede pe telefon: ecranul principal + serverul + inelul */
     subject: 0.66,                           /* înălțimea serverului ca fracțiune din hero (desktop) */
     field: { cx: 1700, hw: 230, top: 0, bottom: 1240 },          /* fasciculele de lumină de deasupra serverului */
     ring: { cx: 1720, cy: 1240, rx: 380, ry: 58 },               /* inelul de pe podea */
@@ -76,7 +77,7 @@
 
   /* ---------- layout: fotografia acoperă hero-ul; ecranul principal stă la dreapta textului ---------- */
   var L = { s: 0.5, ox: 0, oy: 0, pw: 1, ph: 1, compact: false };
-  var COMPACT_MQ = matchMedia('(max-width: 900px), (max-width: 1180px) and (orientation: portrait)');
+  var COMPACT_MQ = matchMedia('(max-width: 639px), (max-width: 1180px) and (orientation: portrait)');
   var OVER = 1.025;                          /* rezervă pentru paralaxă, ca marginile să nu se vadă */
   function layout() {
     var pw = plate.clientWidth, ph = plate.clientHeight;
@@ -96,18 +97,18 @@
       if (ox + IW * s < pw) { s = Math.max(s, (pw - ox) / IW); }          /* fotografia acoperă marginea dreaptă */
       oy = IH * s >= ph ? clamp(ph / 2 - PLATE.anchor[1] * s, ph - IH * s, 0) : (ph - IH * s) / 2;
     } else {
-      var sceneC = (mainL + cab[2]) / 2 - 10;
+      var pc = PLATE.phoneCrop, sceneC = (pc[0] + pc[2]) / 2, sceneY = (pc[1] + pc[3]) / 2;
       if (pw < 600) {
-        /* telefon: cadru strâns pe ecranul principal + server */
-        s = Math.max(pw / (cab[2] - mainL + 130), 0.9 * ph / IH);
+        /* telefon: cadrul „phoneCrop” (ecranul principal, serverul întreg, inelul) încape în scenă */
+        s = Math.min(pw / (pc[2] - pc[0]), ph / (pc[3] - pc[1]));
       } else {
         /* tabletă ținută vertical: scena aproape întreagă, serverul la ~60% din înălțime */
         s = Math.max(0.9 * ph / IH, pw / IW, 0.6 * ph / (cab[3] - cab[1]));
+        sceneC = (mainL + cab[2]) / 2 - 10; sceneY = PLATE.anchor[1] - 40;
       }
-      ox = pw / 2 - sceneC * s;
-      if (ox + IW * s < pw) ox = pw - IW * s;
-      if (ox > 0) ox = 0;
-      oy = IH * s >= ph ? clamp(ph / 2 - (PLATE.anchor[1] - 40) * s, ph - IH * s, 0) : (ph - IH * s) / 2;
+      if (IW * s < pw) s = pw / IW;
+      ox = clamp(pw / 2 - sceneC * s, pw - IW * s, 0);
+      oy = IH * s >= ph ? clamp(ph / 2 - sceneY * s, ph - IH * s, 0) : (ph - IH * s) / 2;
     }
     L.s = s; L.ox = ox; L.oy = oy; L.pw = pw; L.ph = ph; L.compact = compact;
     var box = 'left:' + ox.toFixed(2) + 'px;top:' + oy.toFixed(2) + 'px;width:' + (IW * s).toFixed(2) + 'px;height:' + (IH * s).toFixed(2) + 'px';
@@ -166,7 +167,7 @@
       sc.el.style.width = w + 'px'; sc.el.style.height = h + 'px';
       sc.baseQ = q; sc.w = w; sc.h = h; sc.baseM = matrix3d(w, h, q); sc.chrome = null;
       /* un ecran care ar cădea peste text (ecrane înguste) rămâne stins */
-      sc.hidden = !L.compact && L.textR && Math.min(q[0][0], q[3][0]) < L.textR + 8;
+      sc.hidden = (!L.compact && L.textR && Math.min(q[0][0], q[3][0]) < L.textR + 8) || (L.compact && L.pw < 600 && sc.key !== 'main');
       sc.el.style.visibility = sc.hidden ? 'hidden' : '';
       sc.compact = w < 205; sc.medium = !sc.compact && w < 300;
       placeScreen(sc, 0, 0);
@@ -526,7 +527,7 @@
   }
   function layoutGl() {
     if (!glCanvas || !gl) return;
-    var pr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 1.25);
+    var pr = Math.min(window.devicePixelRatio || 1, 1.25);
     var w = Math.round(IW * L.s * pr), h = Math.round(IH * L.s * pr);
     if (glCanvas.width !== w || glCanvas.height !== h) { glCanvas.width = w; glCanvas.height = h; }
     gl.viewport(0, 0, w, h);
@@ -668,13 +669,15 @@
       smooth.x += (mouse.x - smooth.x) * k; smooth.y += (mouse.y - smooth.y) * k;
       /* camera: derivă lentă (zoom + translație pe două frecvențe) + răspuns calm la mouse + coregrafie la scroll */
       var zoom = still ? 1 : 1.012 + 0.012 * Math.sin(t * 0.17) + 0.006 * Math.sin(t * 0.071 + 1.3);
-      var wx = still ? 0 : Math.sin(t * 0.11) * 5 + Math.sin(t * 0.043 + 2.0) * 3 + (L.compact ? 0 : -smooth.x * 10);
+      var wx = still ? 0 : (Math.sin(t * 0.11) * 5 + Math.sin(t * 0.043 + 2.0) * 3) * (coarse ? 1.5 : 1) + (L.compact ? 0 : -smooth.x * 10);
       var wy = (still ? 0 : Math.cos(t * 0.09) * 4 + (L.compact ? 0 : -smooth.y * 7)) + sp * 70;
       var wk = wx.toFixed(1) + ',' + wy.toFixed(1) + ',' + (zoom + sp * 0.04).toFixed(4);
       if (wk !== lastWorld) { lastWorld = wk; world.style.transform = 'translate3d(' + wx.toFixed(1) + 'px,' + wy.toFixed(1) + 'px,0) scale(' + (zoom + sp * 0.04).toFixed(4) + ')'; }
       /* paralaxă de adâncime (UV): mouse + o derivă proprie, ca scena să „respire” și fără cursor */
-      var parX = still ? 0 : (L.compact ? 0 : -smooth.x * 0.011) + Math.sin(t * 0.21) * 0.0035 + Math.sin(t * 0.083 + 0.7) * 0.002;
-      var parY = still ? 0 : (L.compact ? 0 : -smooth.y * 0.006) + Math.cos(t * 0.16) * 0.002;
+      /* pe touch nu există mouse: deriva proprie e mai amplă, ca adâncimea să se simtă și așa */
+      var dk = coarse ? 1.7 : 1;
+      var parX = still ? 0 : (L.compact ? 0 : -smooth.x * 0.011) + (Math.sin(t * 0.21) * 0.0035 + Math.sin(t * 0.083 + 0.7) * 0.002) * dk;
+      var parY = still ? 0 : (L.compact ? 0 : -smooth.y * 0.006) + Math.cos(t * 0.16) * 0.002 * dk;
       if (bootAt >= 0 && !still) {
         if (bt > nextAttack) { launchAttack(); nextAttack = bt + 2.4 + Math.random() * 2.2; }
         stepAttacks(dt);

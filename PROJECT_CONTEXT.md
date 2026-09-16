@@ -42,6 +42,13 @@ https://flaviusvranau1.github.io/mdy-solutions-redesign/
 - Video mapping measured on frames: top −6.2, height 1535.8 image px (MiniMax
   reframes by ~0.8% vertically). Verified locally at 390, 1024×1366, 1280, 1440,
   1920; video texture path checked (readyState 4, gl error 0).
+- Responsive pass (Flavius: "fă-o și responsive, pe mobil cât mai decent"): portrait
+  phones use `PLATE.phoneCrop` (main screen + whole cabinet + ring) fitted into the
+  0.86 stage, the small screen is hidden there, the controls sit below the scene;
+  landscape phones (640–900 px) keep two columns with compact type; tablet portrait
+  keeps the near-full scene. On touch the autonomous depth drift and camera drift are
+  stronger (no mouse). GL canvas DPR cap 1.25 everywhere. Checked in the Browser pane
+  at 375×812 (mobile emulation) and 844×390.
 
 ### 2026-09-15 — hero „Sentinel”: server modern + cyber security, generat cu Higgsfield
 
